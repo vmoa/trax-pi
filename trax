@@ -17,7 +17,7 @@ from time import sleep
 Sensor = []
 
 # Default sensor have pull-down resistors and are active high
-def newSensor(pin, pull_up=False, active_state=True bounce_time=100):
+def newSensor(pin, pull_up=False, active_state=True, bounce_time=100):
     return DigitalInputDevice(pin=pin, pull_up=pull_up, bounce_time=bounce_time)
 
 weatherOK = newSensor(pin=4);
@@ -37,8 +37,8 @@ Control = []
 def newControl(pin, active_high=True, initial_value=False):
     return DigitalOutputDevice(pin=pin, active_high=active_high, initial_value=initial_value)
 
-roofPowerOut = newControl(pin=5)
-mountPowerOut = newControl(pin=6)
+roofPowerOut = newControl(pin=5, active_high=False)
+mountPowerOut = newControl(pin=6, active_high=False)
 fobOutput = newControl(pin=26)
 heartLed = newControl(pin=13)
 laserPowerOut = newControl(pin=16)
