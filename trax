@@ -1,0 +1,51 @@
+#!/usr/bin/python3
+#
+# T-Rax roof controller for the Raspberry Pi
+#
+# This is a roll-off roof controller specifically designed and built for
+# Robert Ferguson Observatory (https://rfo.org) but the code will hopefully
+# be generic enough that it can be adapted for other roll-off roofs.
+# See README.md for details.
+
+from gpiozero import DigitalInputDevice, DigitalOutputDevice
+from time import sleep
+
+# Input GPIO ports (sensors)
+# I am keeping sensors in an array because I think I can use a mask to simplify
+# the safety logic, though maybe an enum is better....
+
+Sensor = []
+
+# Default sensor have pull-down resistors and are active high
+def newSensor(pin, pull_up=False, active_state=True bounce_time=100):
+    return DigitalInputDevice(pin=pin, pull_up=pull_up, bounce_time=bounce_time)
+
+weatherOK = newSensor(pin=4);
+bldgPowerIn = newSensor(pin=17);
+roofPowerIn = newSensor(pin=27);
+mountPowerIn = newSensor(pin=22);
+roofOpen = newSensor(pin=23);
+roofClosed = newSensor(pin=24);
+mountParked = newSensor(pin=25);
+
+
+# Output GPIO ports (controls)
+
+Control = []
+
+# Default controls are active high
+def newControl(pin, active_high=True, initial_value=False):
+    return DigitalOutputDevice(pin=pin, active_high=active_high, initial_value=initial_value)
+
+roofPowerOut = newControl(pin=5)
+mountPowerOut = newControl(pin=6)
+fobOutput = newControl(pin=26)
+heartLed = newControl(pin=13)
+laserPowerOut = newControl(pin=16)
+
+# Loop on heard LED blinkie
+while True:
+    heartLed.on()
+    sleep(1)
+    heartLed.off()
+    sleep(1)

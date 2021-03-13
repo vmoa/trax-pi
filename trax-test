@@ -1,0 +1,76 @@
+#!/usr/bin/python3
+#
+# T-Rax roof controller for the Raspberry Pi
+#
+# This is a roll-off roof controller specifically designed and built for
+# Robert Ferguson Observatory (https://rfo.org) but the code will hopefully
+# be generic enough that it can be adapted for other roll-off roofs.
+# See README.md for details.
+
+from gpiozero import DigitalInputDevice, DigitalOutputDevice
+from time import sleep
+
+# Input GPIO ports (sensors)
+# I am keeping sensors in an array because I think I can use a mask to simplify
+# the safety logic, though maybe an enum is better....
+
+Sensor = []
+
+# Default sensor have pull-down resistors and are active high
+def newSensor(pin, pull_up=False, active_state=True bounce_time=100):
+    return DigitalInputDevice(pin=pin, pull_up=pull_up, bounce_time=bounce_time)
+
+weatherOk = newSensor(pin=4);
+bldgPowerIn = newSensor(pin=17);
+roofPowerIn = newSensor(pin=27);
+mountPowerIn = newSensor(pin=22);
+roofOpen = newSensor(pin=23);
+roofClosed = newSensor(pin=24);
+mountParked = newSensor(pin=25);
+
+
+# Output GPIO ports (controls)
+
+Control = []
+
+# Default controls are active high
+def newControl(pin, active_high=True, initial_value=False):
+    return DigitalOutputDevice(pin=pin, active_high=active_high, initial_value=initial_value)
+
+roofPowerOut = newControl(pin=5)
+mountPowerOut = newControl(pin=6)
+fobOutput = newControl(pin=26)
+heartLed = newControl(pin=13)
+laserPowerOut = newControl(pin=16)
+
+
+def blinkOnce(input, output=0):
+    output.on()
+    sleep(0.25)
+    output.off()
+
+def blinkTwice(input, output=0):
+    output.on()
+    sleep(0.1)
+    output.off()
+    sleep(0.05)
+    output.on()
+    sleep(0.1)
+    output.off()
+
+mountPowerIn.when_activated = lambda: blinkOnce(0, ouput=mountPowerOut)
+roofPowerIn.when_activated  = lambda: blinkOnce(0, output=roofPowerOut)
+mountParked.when_activated  = lambda: blinkOnce(0, output=fobOutput)
+bldgPowerIn.when_activated  = lambda: blinkOnce(0, output=heartLed)
+
+weatherOk.when_activated  = lambda: blinkTwice(0, output=mountPowerOut)
+roofOpen.when_activated   = lambda: blinkTwice(0, output=roofPowerOut)
+roofClosed.when_activated = lambda: blinkTwice(0, output=fobOutput)
+
+# Loop on heart LED blinkie
+while True:
+    for pin in roofPowerOut, mountPowerOut, fobOutput, heartLed, laserPowerOut:
+        blinkOnce(0, output=pin)
+        sleep(0.5)
+        blinkTwice(0, output=pin)
+        sleep(0.5)
