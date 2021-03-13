@@ -35,7 +35,7 @@
 | 13   | PWM      | Heart LED |
 | 19   | PWM,SPI1 |  |
 | 26   |          | fobOutput |
-| ---- | -------- | ----- |
+| | | |
 | 14   | Serial   |  |
 | 15   | Serial   |  |
 | 18   | PWM,SPI1 |  |
@@ -49,4 +49,3 @@
 | 16   | SPI1     | laserPowerOut |
 | 20   | SPI1     |  |
 | 21   | SPI1     |  |
-| ---- | -------- | ----- |
