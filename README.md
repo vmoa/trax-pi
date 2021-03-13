@@ -18,9 +18,8 @@
 * GPIO13: heartLed = newControl(pin=13)
 * GPIO16: laserPowerOut = newControl(pin=16)
 
-+------+----------+-------+
 | GPIO | Function | T-Rax |
-+------+----------+-------+
+| ---- | -------- | ----- |
 | 2    | I2C      | LCD   |
 | 3    | I2C      | LCD   |
 | 4    |          | weatherOK |
@@ -36,7 +35,7 @@
 | 13   | PWM      | Heart LED |
 | 19   | PWM,SPI1 |  |
 | 26   |          | fobOutput |
-+------+----------+-------+
+| ---- | -------- | ----- |
 | 14   | Serial   |  |
 | 15   | Serial   |  |
 | 18   | PWM,SPI1 |  |
@@ -50,4 +49,4 @@
 | 16   | SPI1     | laserPowerOut |
 | 20   | SPI1     |  |
 | 21   | SPI1     |  |
-+------+----------+-------+
+| ---- | -------- | ----- |
