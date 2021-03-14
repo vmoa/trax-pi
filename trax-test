@@ -1,23 +1,22 @@
 #!/usr/bin/python3
 #
-# T-Rax roof controller for the Raspberry Pi
+# T-Rax roof controller tester
 #
-# This is a roll-off roof controller specifically designed and built for
-# Robert Ferguson Observatory (https://rfo.org) but the code will hopefully
-# be generic enough that it can be adapted for other roll-off roofs.
-# See README.md for details.
+# This is to verify that all the pins are connected as designed, and a validation
+# of the interrupt driven mechanism.
 
 from gpiozero import DigitalInputDevice, DigitalOutputDevice
+from datetime import datetime
 from time import sleep
+import signal
+import os
 
-# Input GPIO ports (sensors)
-# I am keeping sensors in an array because I think I can use a mask to simplify
-# the safety logic, though maybe an enum is better....
+heartInterval = 1       # Seconds between heartbeats (drives SIGALRM)
+statusInterval = 60     # Seconds between status updates without input changes
 
-Sensor = []
-
-# Default sensor have pull-down resistors and are active high
-def newSensor(pin, pull_up=False, active_state=True, bounce_time=100):
+# Define Input GPIO ports (sensors)
+# Default sensors have pull-down resistors and are active high
+def newSensor(pin, pull_up=False, active_state=True, bounce_time=0.1):
     return DigitalInputDevice(pin=pin, pull_up=pull_up, bounce_time=bounce_time)
 
 weatherOk = newSensor(pin=4);
@@ -28,28 +27,63 @@ roofOpen = newSensor(pin=23);
 roofClosed = newSensor(pin=24);
 mountParked = newSensor(pin=25);
 
+Sensors = [
+    ("wx", weatherOk),
+    ("bldg", bldgPowerIn),
+    ("mntin", mountPowerIn),
+    ("roofin", roofPowerIn),
+    ("park", mountParked),
+    ("open", roofOpen),
+    ("close", roofClosed),
+];
 
-# Output GPIO ports (controls)
 
-Control = []
-
-# Default controls are active high
+# Define Output GPIO ports (controls)
 def newControl(pin, active_high=True, initial_value=False):
     return DigitalOutputDevice(pin=pin, active_high=active_high, initial_value=initial_value)
 
 roofPowerOut = newControl(pin=5, active_high=False)
 mountPowerOut = newControl(pin=6, active_high=False)
-fobOutput = newControl(pin=26)
 heartLed = newControl(pin=13)
 laserPowerOut = newControl(pin=16)
+fobOutput = newControl(pin=26)
 
+Controls = [
+    ("heart", heartLed),
+    ("mntout", mountPowerOut),
+    ("roofout", roofPowerOut),
+    ("laser", laserPowerOut),
+    ("fob", fobOutput),
+];
 
-def blinkOnce(input, output=0):
+def printStatus():
+    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S "), end='')
+    for tag, gpio in Sensors:
+        if (gpio.is_active):
+            print("[{}] ".format(tag.upper()), end='')
+        else:
+            print("({}) ".format(tag), end='')
+    for tag, gpio in Controls:
+        if (gpio.is_active):
+            print("[{}] ".format(tag.upper()), end='')
+        else:
+            print("({}) ".format(tag), end='')
+    print()
+
+def alarmHandler(signum,frame):
+    blinkTwice(heartLed)
+    if (int(datetime.now().second) % statusInterval == 0):
+        printStatus()
+
+def blinkOnce(output=0):
+    printStatus()
     output.on()
     sleep(0.25)
     output.off()
 
-def blinkTwice(input, output=0):
+def blinkTwice(output=0):
+    if (output != heartLed):
+        printStatus()
     output.on()
     sleep(0.1)
     output.off()
@@ -58,19 +92,31 @@ def blinkTwice(input, output=0):
     sleep(0.1)
     output.off()
 
-mountPowerIn.when_activated = lambda: blinkOnce(0, ouput=mountPowerOut)
-roofPowerIn.when_activated  = lambda: blinkOnce(0, output=roofPowerOut)
-mountParked.when_activated  = lambda: blinkOnce(0, output=fobOutput)
-bldgPowerIn.when_activated  = lambda: blinkOnce(0, output=heartLed)
+# Button press callbacks cause blinkies (which also prints status)
+mountPowerIn.when_activated = lambda: blinkOnce(output=mountPowerOut)
+roofPowerIn.when_activated  = lambda: blinkOnce(output=roofPowerOut)
+mountParked.when_activated  = lambda: blinkOnce(output=laserPowerOut)
+roofClosed.when_activated   = lambda: blinkOnce(output=fobOutput)
+weatherOk.when_activated   = lambda: blinkTwice(output=mountPowerOut)
+bldgPowerIn.when_activated = lambda: blinkTwice(output=mountPowerOut)
+roofOpen.when_activated    = lambda: blinkTwice(output=fobOutput)
 
-weatherOk.when_activated  = lambda: blinkTwice(0, output=mountPowerOut)
-roofOpen.when_activated   = lambda: blinkTwice(0, output=roofPowerOut)
-roofClosed.when_activated = lambda: blinkTwice(0, output=fobOutput)
+# Button up callbacks just print status
+mountPowerIn.when_deactivated = printStatus
+roofPowerIn.when_deactivated  = printStatus
+mountParked.when_deactivated  = printStatus
+roofClosed.when_deactivated   = printStatus
+weatherOk.when_deactivated   = printStatus
+bldgPowerIn.when_deactivated = printStatus
+roofOpen.when_deactivated    = printStatus
 
-# Loop on heart LED blinkie
+# Install alarm hanlder
+signal.signal(signal.SIGALRM, alarmHandler)
+signal.alarm(heartInterval)
+
+printStatus();
+
+# Interrupt loop
 while True:
-    for pin in roofPowerOut, mountPowerOut, fobOutput, heartLed, laserPowerOut:
-        blinkOnce(0, output=pin)
-        sleep(0.5)
-        blinkTwice(0, output=pin)
-        sleep(0.5)
+    signal.pause()
+    signal.alarm(heartInterval)
