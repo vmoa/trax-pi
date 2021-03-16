@@ -14,6 +14,8 @@ from time import sleep
 import signal
 import os
 
+import util
+
 from device import Sensor, Control
 
 heartInterval = 1       # Seconds between heartbeats (drives SIGALRM)
@@ -33,20 +35,6 @@ roofPowerOut = Control(pin=5, name='roofout', active_high=False)
 laserPowerOut = Control(pin=16, name='laser')
 fobOutput = Control(pin=26, name='fob')
 
-def printStatus():
-    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S "), end='')
-    for sensor in Sensor.sensors:
-        if (sensor.is_active()):
-            print("[{}] ".format(sensor.name.upper()), end='')
-        else:
-            print("({}) ".format(sensor.name), end='')
-    for control in Control.controls:
-        if (control.is_active()):
-            print("[{}] ".format(control.name.upper()), end='')
-        else:
-            print("({}) ".format(control.name), end='')
-    print()
-
 def beatHeart(output=0):
     output.on()
     sleep(0.1)
@@ -59,7 +47,7 @@ def beatHeart(output=0):
 def alarmHandler(signum,frame):
     beatHeart(heartLed)
     if (int(datetime.now().second) % statusInterval == 0):
-        printStatus()
+        util.printStatus()
 
 # Button press callbacks cause blinkies (which also prints status)
 mountPowerIn.when_activated = lambda: blinkOnce(output=mountPowerOut)
@@ -71,19 +59,19 @@ bldgPowerIn.when_activated = lambda: blinkTwice(output=mountPowerOut)
 roofOpen.when_activated    = lambda: blinkTwice(output=fobOutput)
 
 # Button up callbacks just print status
-mountPowerIn.when_deactivated = printStatus
-roofPowerIn.when_deactivated  = printStatus
-mountParked.when_deactivated  = printStatus
-roofClosed.when_deactivated   = printStatus
-weatherOk.when_deactivated   = printStatus
-bldgPowerIn.when_deactivated = printStatus
-roofOpen.when_deactivated    = printStatus
+mountPowerIn.when_deactivated = util.printStatus
+roofPowerIn.when_deactivated  = util.printStatus
+mountParked.when_deactivated  = util.printStatus
+roofClosed.when_deactivated   = util.printStatus
+weatherOk.when_deactivated   = util.printStatus
+bldgPowerIn.when_deactivated = util.printStatus
+roofOpen.when_deactivated    = util.printStatus
 
 # Install alarm hanlder
 signal.signal(signal.SIGALRM, alarmHandler)
 signal.alarm(heartInterval)
 
-printStatus();
+util.printStatus();
 
 # Interrupt loop
 while True:
