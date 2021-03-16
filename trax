@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 #
 # T-Rax roof controller for the Raspberry Pi
+# T-Rax roof controller tester
 #
 # This is a roll-off roof controller specifically designed and built for
 # Robert Ferguson Observatory (https://rfo.org) but the code will hopefully
@@ -8,44 +9,83 @@
 # See README.md for details.
 
 from gpiozero import DigitalInputDevice, DigitalOutputDevice
+from datetime import datetime
 from time import sleep
+import signal
+import os
 
-# Input GPIO ports (sensors)
-# I am keeping sensors in an array because I think I can use a mask to simplify
-# the safety logic, though maybe an enum is better....
+from device import Sensor, Control
 
-Sensor = []
+heartInterval = 1       # Seconds between heartbeats (drives SIGALRM)
+statusInterval = 60     # Seconds between status updates without input changes
 
-# Default sensor have pull-down resistors and are active high
-def newSensor(pin, pull_up=False, active_state=True, bounce_time=100):
-    return DigitalInputDevice(pin=pin, pull_up=pull_up, bounce_time=bounce_time)
+weatherOk = Sensor(pin=4, name='wx');
+bldgPowerIn = Sensor(pin=17, name='bldg');
+mountPowerIn = Sensor(pin=22, name='mntin');
+roofPowerIn = Sensor(pin=27, name='roofin');
+mountParked = Sensor(pin=25, name='park');
+roofOpen = Sensor(pin=23, name='open');
+roofClosed = Sensor(pin=24, name='close');
 
-weatherOK = newSensor(pin=4);
-bldgPowerIn = newSensor(pin=17);
-roofPowerIn = newSensor(pin=27);
-mountPowerIn = newSensor(pin=22);
-roofOpen = newSensor(pin=23);
-roofClosed = newSensor(pin=24);
-mountParked = newSensor(pin=25);
+heartLed = Control(pin=13, name='heart')
+mountPowerOut = Control(pin=6, name='mntout', active_high=False)
+roofPowerOut = Control(pin=5, name='roofout', active_high=False)
+laserPowerOut = Control(pin=16, name='laser')
+fobOutput = Control(pin=26, name='fob')
 
+def printStatus():
+    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S "), end='')
+    for sensor in Sensor.sensors:
+        if (sensor.is_active()):
+            print("[{}] ".format(sensor.name.upper()), end='')
+        else:
+            print("({}) ".format(sensor.name), end='')
+    for control in Control.controls:
+        if (control.is_active()):
+            print("[{}] ".format(control.name.upper()), end='')
+        else:
+            print("({}) ".format(control.name), end='')
+    print()
 
-# Output GPIO ports (controls)
+def beatHeart(output=0):
+    output.on()
+    sleep(0.1)
+    output.off()
+    sleep(0.05)
+    output.on()
+    sleep(0.1)
+    output.off()
 
-Control = []
+def alarmHandler(signum,frame):
+    beatHeart(heartLed)
+    if (int(datetime.now().second) % statusInterval == 0):
+        printStatus()
 
-# Default controls are active high
-def newControl(pin, active_high=True, initial_value=False):
-    return DigitalOutputDevice(pin=pin, active_high=active_high, initial_value=initial_value)
+# Button press callbacks cause blinkies (which also prints status)
+mountPowerIn.when_activated = lambda: blinkOnce(output=mountPowerOut)
+roofPowerIn.when_activated  = lambda: blinkOnce(output=roofPowerOut)
+mountParked.when_activated  = lambda: blinkOnce(output=laserPowerOut)
+roofClosed.when_activated   = lambda: blinkOnce(output=fobOutput)
+weatherOk.when_activated   = lambda: blinkTwice(output=mountPowerOut)
+bldgPowerIn.when_activated = lambda: blinkTwice(output=mountPowerOut)
+roofOpen.when_activated    = lambda: blinkTwice(output=fobOutput)
 
-roofPowerOut = newControl(pin=5, active_high=False)
-mountPowerOut = newControl(pin=6, active_high=False)
-fobOutput = newControl(pin=26)
-heartLed = newControl(pin=13)
-laserPowerOut = newControl(pin=16)
+# Button up callbacks just print status
+mountPowerIn.when_deactivated = printStatus
+roofPowerIn.when_deactivated  = printStatus
+mountParked.when_deactivated  = printStatus
+roofClosed.when_deactivated   = printStatus
+weatherOk.when_deactivated   = printStatus
+bldgPowerIn.when_deactivated = printStatus
+roofOpen.when_deactivated    = printStatus
 
-# Loop on heard LED blinkie
+# Install alarm hanlder
+signal.signal(signal.SIGALRM, alarmHandler)
+signal.alarm(heartInterval)
+
+printStatus();
+
+# Interrupt loop
 while True:
-    heartLed.on()
-    sleep(1)
-    heartLed.off()
-    sleep(1)
+    signal.pause()
+    signal.alarm(heartInterval)
