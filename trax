@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 #
 # T-Rax roof controller for the Raspberry Pi
-# T-Rax roof controller tester
 #
 # This is a roll-off roof controller specifically designed and built for
 # Robert Ferguson Observatory (https://rfo.org) but the code will hopefully
@@ -14,13 +13,14 @@ from time import sleep
 import signal
 import os
 
-import util
-
 from device import Sensor, Control
+import util
+from test_mode import TestMode
 
 heartInterval = 1       # Seconds between heartbeats (drives SIGALRM)
 statusInterval = 60     # Seconds between status updates without input changes
 
+# Hard coded GPIO setup
 weatherOk = Sensor(pin=4, name='wx');
 bldgPowerIn = Sensor(pin=17, name='bldg');
 mountPowerIn = Sensor(pin=22, name='mntin');
@@ -45,35 +45,31 @@ def beatHeart(output=0):
     output.off()
 
 def alarmHandler(signum,frame):
-    beatHeart(heartLed)
+    beatHeart(heartLed.device)
     if (int(datetime.now().second) % statusInterval == 0):
         util.printStatus()
 
-# Button press callbacks cause blinkies (which also prints status)
-mountPowerIn.when_activated = lambda: blinkOnce(output=mountPowerOut)
-roofPowerIn.when_activated  = lambda: blinkOnce(output=roofPowerOut)
-mountParked.when_activated  = lambda: blinkOnce(output=laserPowerOut)
-roofClosed.when_activated   = lambda: blinkOnce(output=fobOutput)
-weatherOk.when_activated   = lambda: blinkTwice(output=mountPowerOut)
-bldgPowerIn.when_activated = lambda: blinkTwice(output=mountPowerOut)
-roofOpen.when_activated    = lambda: blinkTwice(output=fobOutput)
+import argparse
 
-# Button up callbacks just print status
-mountPowerIn.when_deactivated = util.printStatus
-roofPowerIn.when_deactivated  = util.printStatus
-mountParked.when_deactivated  = util.printStatus
-roofClosed.when_deactivated   = util.printStatus
-weatherOk.when_deactivated   = util.printStatus
-bldgPowerIn.when_deactivated = util.printStatus
-roofOpen.when_deactivated    = util.printStatus
+def main():
 
-# Install alarm hanlder
-signal.signal(signal.SIGALRM, alarmHandler)
-signal.alarm(heartInterval)
+    parser = argparse.ArgumentParser(description='T-Rax roof controller.')
+    parser.add_argument('--test-mode', dest='test_mode', action='store_true', help='enter test mode')
+    args = parser.parse_args()
 
-util.printStatus();
-
-# Interrupt loop
-while True:
-    signal.pause()
+    # Install alarm hanlder
+    signal.signal(signal.SIGALRM, alarmHandler)
     signal.alarm(heartInterval)
+
+    if (args.test_mode):
+        test = TestMode()
+
+    util.printStatus();
+
+    # Interrupt loop
+    while True:
+        signal.pause()
+        signal.alarm(heartInterval)
+
+if __name__ == "__main__":
+    main()

@@ -26,7 +26,7 @@ class TestMode:
         output.off()
 
     def blinkTwice(self, output=0):
-        if (output != heartLed):
+        if (output != Control.by_name['heart'].device):
             util.printStatus()
         output.on()
         sleep(0.1)
@@ -37,9 +37,10 @@ class TestMode:
         output.off()
 
     def __init__(self):
-        print("TEST: Entering test mode")
+        print("TEST MODE: Entering test mode")
         if (re.match('^172\.19\.9\.', util.get_ip())):
-            print("TEST MODE OK: Detected that you're running on Dave's network")
+            # Make life easy for Dave
+            print("TEST MODE: Welcome back, Dave")
         else:
             print()
             print("****************************************************************")
@@ -56,13 +57,13 @@ class TestMode:
                 exit(1)
 
         # Set up testing triggers
-        Sensor.by_name['mntin'].device.when_activated  = lambda: blinkOnce(Control.by_name['mntout'].device)
-        Sensor.by_name['roofin'].device.when_activated = lambda: blinkOnce(Control.by_name['roofout'].device)
-        Sensor.by_name['park'].device.when_activated   = lambda: blinkOnce(Control.by_name['laser'].device)
-        Sensor.by_name['close'].device.when_activated  = lambda: blinkOnce(Control.by_name['fob'].device)
-        Sensor.by_name['wx'].device.when_activated     = lambda: blinkTwice(Control.by_name['mntout'].device)
-        Sensor.by_name['bldg'].device.when_activated   = lambda: blinkTwice(Control.by_name['mntout'].device)
-        Sensor.by_name['open'].device.when_activated   = lambda: blinkTwice(Control.by_name['fob'].device)
+        Sensor.by_name['mntin'].device.when_activated  = lambda: self.blinkOnce(Control.by_name['mntout'].device)
+        Sensor.by_name['roofin'].device.when_activated = lambda: self.blinkOnce(Control.by_name['roofout'].device)
+        Sensor.by_name['park'].device.when_activated   = lambda: self.blinkOnce(Control.by_name['laser'].device)
+        Sensor.by_name['close'].device.when_activated  = lambda: self.blinkOnce(Control.by_name['fob'].device)
+        Sensor.by_name['wx'].device.when_activated     = lambda: self.blinkTwice(Control.by_name['laser'].device)
+        Sensor.by_name['bldg'].device.when_activated   = lambda: self.blinkTwice(Control.by_name['mntout'].device)
+        Sensor.by_name['open'].device.when_activated   = lambda: self.blinkTwice(Control.by_name['fob'].device)
 
         Sensor.by_name['mntin'].device.when_deactivated  = util.printStatus
         Sensor.by_name['roofin'].device.when_deactivated = util.printStatus
@@ -72,28 +73,32 @@ class TestMode:
         Sensor.by_name['bldg'].device.when_deactivated   = util.printStatus
         Sensor.by_name['open'].device.when_deactivated   = util.printStatus
 
+# This allows the class to be tested locally or be used as an 'include' target
+def main():
+    weatherOk = Sensor(pin=4, name='wx');
+    bldgPowerIn = Sensor(pin=17, name='bldg');
+    mountPowerIn = Sensor(pin=22, name='mntin');
+    roofPowerIn = Sensor(pin=27, name='roofin');
+    mountParked = Sensor(pin=25, name='park');
+    roofOpen = Sensor(pin=23, name='open');
+    roofClosed = Sensor(pin=24, name='close');
 
+    heartLed = Control(pin=13, name='heart')
+    mountPowerOut = Control(pin=6, name='mntout', active_high=False)
+    roofPowerOut = Control(pin=5, name='roofout', active_high=False)
+    laserPowerOut = Control(pin=16, name='laser')
+    fobOutput = Control(pin=26, name='fob')
 
-# Remove before flight
-weatherOk = Sensor(pin=4, name='wx');
-bldgPowerIn = Sensor(pin=17, name='bldg');
-mountPowerIn = Sensor(pin=22, name='mntin');
-roofPowerIn = Sensor(pin=27, name='roofin');
-mountParked = Sensor(pin=25, name='park');
-roofOpen = Sensor(pin=23, name='open');
-roofClosed = Sensor(pin=24, name='close');
+    foo = TestMode()
+    util.printStatus();
+    heartInterval = 1
 
-heartLed = Control(pin=13, name='heart')
-mountPowerOut = Control(pin=6, name='mntout', active_high=False)
-roofPowerOut = Control(pin=5, name='roofout', active_high=False)
-laserPowerOut = Control(pin=16, name='laser')
-fobOutput = Control(pin=26, name='fob')
+    # Interrupt loop
+    while True:
+        signal.pause()
+        signal.alarm(heartInterval)
 
-foo = TestMode()
-
-util.printStatus();
-
-# Interrupt loop
-while True:
-    signal.pause()
-    signal.alarm(heartInterval)
+# Execute only if run as a script
+if __name__ == "__main__":
+    print("TEST MODE: running as a stand alone script")
+    main()
