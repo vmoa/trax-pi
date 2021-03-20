@@ -7,33 +7,34 @@
 # be generic enough that it can be adapted for other roll-off roofs.
 # See README.md for details.
 
+import argparse
 from gpiozero import DigitalInputDevice, DigitalOutputDevice
 from datetime import datetime
 from time import sleep
 import signal
 import os
 
-from device import Sensor, Control
+import device
+import test_mode
 import util
-from test_mode import TestMode
 
 heartInterval = 1       # Seconds between heartbeats (drives SIGALRM)
 statusInterval = 60     # Seconds between status updates without input changes
 
 # Hard coded GPIO setup
-weatherOk = Sensor(pin=4, name='wx');
-bldgPowerIn = Sensor(pin=17, name='bldg');
-mountPowerIn = Sensor(pin=22, name='mntin');
-roofPowerIn = Sensor(pin=27, name='roofin');
-mountParked = Sensor(pin=25, name='park');
-roofOpen = Sensor(pin=23, name='open');
-roofClosed = Sensor(pin=24, name='close');
+weatherOk = device.Sensor(pin=4, name='wx');
+bldgPowerIn = device.Sensor(pin=17, name='bldg');
+mountPowerIn = device.Sensor(pin=22, name='mntin');
+roofPowerIn = device.Sensor(pin=27, name='roofin');
+mountParked = device.Sensor(pin=25, name='park');
+roofOpen = device.Sensor(pin=23, name='open');
+roofClosed = device.Sensor(pin=24, name='close');
 
-heartLed = Control(pin=13, name='heart')
-mountPowerOut = Control(pin=6, name='mntout', active_high=False)
-roofPowerOut = Control(pin=5, name='roofout', active_high=False)
-laserPowerOut = Control(pin=16, name='laser')
-fobOutput = Control(pin=26, name='fob')
+heartLed = device.Control(pin=13, name='heart')
+mountPowerOut = device.Control(pin=6, name='mntout', active_high=False)
+roofPowerOut = device.Control(pin=5, name='roofout', active_high=False)
+laserPowerOut = device.Control(pin=16, name='laser')
+fobOutput = device.Control(pin=26, name='fob')
 
 def beatHeart(output=0):
     output.on()
@@ -47,12 +48,10 @@ def beatHeart(output=0):
 def alarmHandler(signum,frame):
     beatHeart(heartLed.device)
     if (int(datetime.now().second) % statusInterval == 0):
-        util.printStatus()
+        device.printStatus()
 
-import argparse
 
 def main():
-
     parser = argparse.ArgumentParser(description='T-Rax roof controller.')
     parser.add_argument('--test-mode', dest='test_mode', action='store_true', help='enter test mode')
     args = parser.parse_args()
@@ -61,10 +60,10 @@ def main():
     signal.signal(signal.SIGALRM, alarmHandler)
     signal.alarm(heartInterval)
 
-    if (args.test_mode):
-        test = TestMode()
+    device.printStatus();
 
-    util.printStatus();
+    if (args.test_mode):
+        test = test_mode.TestMode()
 
     # Interrupt loop
     while True:
