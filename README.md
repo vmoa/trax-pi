@@ -5,6 +5,8 @@ that Jim Finn and David Kensiski created back in 2017. The switch to the Raspber
 to implement an [ASCOM Alpaca](https://ascom-standards.org/Developer/Alpaca.htm) interface so that the roof
 could be opened via automation through tools such as [ACP](https://acpx.dc3.com/).
 
+# GPIO -- General Purpose Input/Output
+
 ![GPIO Pinout Diagram](GPIO-Pinout-Diagram-2.png)
 
 ## Input GPIO ports (sensors)
@@ -17,7 +19,7 @@ could be opened via automation through tools such as [ACP](https://acpx.dc3.com/
 * GPIO24: roofClosed = newSensor(pin=24);
 * GPIO25: mountParked = newSensor(pin=25);
 
-# Output GPIO ports (controls)
+## Output GPIO ports (controls)
 
 * GPIO5: roofPowerOut = newControl(pin=5)
 * GPIO6: mountPowerOut = newControl(pin=6)
