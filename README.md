@@ -2,7 +2,7 @@
 
 ## Input GPIO ports (sensors)
 
-![GPIO Pinout Diagram](https://www.raspberrypi.org/documentation/usage/gpio/images/GPIO-Pinout-Diagram-2.png)
+![GPIO Pinout Diagram](GPIO-Pinout-Diagram-2.png)
 
 * GPIO4: weatherOK = newSensor(pin=4);
 * GPIO17: bldgPowerIn = newSensor(pin=17);
