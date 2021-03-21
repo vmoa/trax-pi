@@ -1,8 +1,13 @@
-# TRax Notes
+# T-Rax Raspberry Pi Notes
 
-## Input GPIO ports (sensors)
+This design is a logical follow-on to the [Arduino T-Rax](https://github.com/votmoa/trax-arduino) roof controller
+that Jim Finn and David Kensiski created back in 2017. The switch to the Raspberry Pi was driven by the desire
+to implement an [ASCOM Alpaca](https://ascom-standards.org/Developer/Alpaca.htm) interface so that the roof
+could be opened via automation through tools such as [ACP](https://dc3.com).
 
 ![GPIO Pinout Diagram](GPIO-Pinout-Diagram-2.png)
+
+## Input GPIO ports (sensors)
 
 * GPIO4: weatherOK = newSensor(pin=4);
 * GPIO17: bldgPowerIn = newSensor(pin=17);
