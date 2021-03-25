@@ -15,26 +15,30 @@ import signal
 import os
 
 import device
+from logger import Logger
 import test_mode
 import util
 
+version = 'v0.9'        # T-Rax version
 heartInterval = 1       # Seconds between heartbeats (drives SIGALRM)
 statusInterval = 60     # Seconds between status updates without input changes
 
-# Hard coded GPIO setup
-weatherOk = device.Sensor(pin=4, name='wx');
-bldgPowerIn = device.Sensor(pin=17, name='bldg');
-mountPowerIn = device.Sensor(pin=22, name='mntin');
-roofPowerIn = device.Sensor(pin=27, name='roofin');
-mountParked = device.Sensor(pin=25, name='park');
-roofOpen = device.Sensor(pin=23, name='open');
-roofClosed = device.Sensor(pin=24, name='close');
+# Hard coded GPIO setup -- should these be in a dict?
+class TraxGpio:
+    def __init__(self):
+        self.weatherOk = device.Sensor(pin=4, name='wx', logger=logger);
+        self.bldgPowerIn = device.Sensor(pin=17, name='bldg');
+        self.mountPowerIn = device.Sensor(pin=22, name='mntin');
+        self.roofPowerIn = device.Sensor(pin=27, name='roofin');
+        self.mountParked = device.Sensor(pin=25, name='park');
+        self.roofOpen = device.Sensor(pin=23, name='open');
+        self.roofClosed = device.Sensor(pin=24, name='close');
 
-heartLed = device.Control(pin=13, name='heart')
-mountPowerOut = device.Control(pin=6, name='mntout', active_high=False)
-roofPowerOut = device.Control(pin=5, name='roofout', active_high=False)
-laserPowerOut = device.Control(pin=16, name='laser')
-fobOutput = device.Control(pin=26, name='fob')
+        self.heartLed = device.Control(pin=13, name='heart', logger=logger)
+        self.mountPowerOut = device.Control(pin=6, name='mntout', active_high=False)
+        self.roofPowerOut = device.Control(pin=5, name='roofout', active_high=False)
+        self.laserPowerOut = device.Control(pin=16, name='laser')
+        self.fobOutput = device.Control(pin=0, name='fob')
 
 def beatHeart(output=0):
     output.on()
@@ -46,21 +50,28 @@ def beatHeart(output=0):
     output.off()
 
 def alarmHandler(signum,frame):
-    beatHeart(heartLed.device)
+    beatHeart(gpio.heartLed.device)
     if (int(datetime.now().second) % statusInterval == 0):
-        device.printStatus()
+        logger.info(device.printStatus())
 
 
 def main():
+    global logger
+    logger = Logger()       # Global logger object; initialized 
+    logger.info("Initializing T-Rax for the Raspberry Pi", version)
+
     parser = argparse.ArgumentParser(description='T-Rax roof controller.')
     parser.add_argument('--test-mode', dest='test_mode', action='store_true', help='enter test mode')
     args = parser.parse_args()
+
+    global gpio
+    gpio = TraxGpio()
 
     # Install alarm hanlder
     signal.signal(signal.SIGALRM, alarmHandler)
     signal.alarm(heartInterval)
 
-    device.printStatus();
+    logger.info(device.printStatus())
 
     if (args.test_mode):
         test = test_mode.TestMode()

@@ -13,8 +13,11 @@ class Sensor:
     by_name = {}    # dict of all sensors by name
     by_pin = {}     # dict of all sensors by pin
     names = []      # array of sensor names (in order of creation for status printout)
+    global_logger = 0   # local copy of global object
 
-    def __init__(self, pin, name, pull_up=False, active_state=True, bounce_time=0.1, when_activated=0, when_deactivated=0):
+    def __init__(self, pin, name, pull_up=False, active_state=True, bounce_time=0.1, when_activated=0, when_deactivated=0, logger=0):
+        if (logger):
+            Sensor.global_logger = logger
         # TODO throw exception if pin not set
         self.name = name
         self.device = DigitalInputDevice(pin=pin, pull_up=pull_up, bounce_time=bounce_time)
@@ -36,10 +39,10 @@ class Sensor:
 
     # Default callbacks; override at instance creation or by setting <var>.device.when_[de]activated
     def activated(self):
-        printStatus()
+        Sensor.global_logger.info(printStatus())
 
     def deactivated(self):
-        printStatus()
+        Sensor.global_logger.info(printStatus())
 
 
 class Control:
@@ -47,8 +50,11 @@ class Control:
     by_name = {}    # dict of all controls by name
     by_pin = {}     # dict of all controls by pin
     names = []      # array of control names (in order of creation for status printout)
+    global_logger = 0   # local copy of global object
 
-    def __init__(self, pin, name, active_high=True, initial_value=False):
+    def __init__(self, pin, name, active_high=True, initial_value=False, logger=0):
+        if (logger):
+            Control.global_logger = logger
         # TODO throw exception if pin not set
         self.name = name
         self.device = DigitalOutputDevice(pin=pin, active_high=active_high, initial_value=initial_value)
@@ -74,15 +80,16 @@ class Control:
 
 
 def printStatus():
-    print(util.timestamp(), threading.get_ident(), end=' ')
+    status = ''
+    ### print(util.timestamp(), threading.get_ident(), end=' ')
     for sensor in Sensor.sensors:
         if (sensor.is_active()):
-            print("[{}] ".format(sensor.name.upper()), end='')
+            status += "[{}] ".format(sensor.name.upper())
         else:
-            print("({}) ".format(sensor.name), end='')
+            status += "({}) ".format(sensor.name)
     for control in Control.controls:
         if (control.is_active()):
-            print("[{}] ".format(control.name.upper()), end='')
+            status += "[{}] ".format(control.name.upper())
         else:
-            print("({}) ".format(control.name), end='')
-    print()
+            status += "({}) ".format(control.name)
+    return(status)
