@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>T-Rax: The RFO Roof Controller</title>
+        <style>
+            html, body {
+                width: 431px;
+                height: 365px;
+                margin: 0;
+                padding: 0;
+                background-color: green;
+            }
+            #container {
+                width: inherit;
+                height: inherit;
+                margin: 0;
+                padding: 0;
+                background-color: #60B3B3;
+            }
+            div.roofposition {
+                width: 100px;
+                height: 28px;
+                position: fixed;
+                top: 46px;
+                left: 60px;
+                margin: 0;
+                border: 1px solid white;
+                padding: 0;
+                border-color: #B3DADA;
+                background-color: #FF0800;
+                display: table-cell;
+                text-align: center;
+                vertical-align: middle;
+            }
+        </style>
+    </head>
+
+    <!-- body onload="window.resizeTo(500,500);
+         chrome.windows.WINDOW_ID_CURRENT.update( { width: 500 });"
+         comment="This does not work" -->
+
+    <body>
+
+        <div id="container">
+            <div class="roofposition">
+                CLOSED
+            </div>
+        </div>
+
+    </body>
+</html>
