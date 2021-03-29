@@ -38,7 +38,7 @@ class TraxGpio:
         self.mountPowerOut = device.Control(pin=6, name='mntout', active_high=False)
         self.roofPowerOut = device.Control(pin=5, name='roofout', active_high=False)
         self.laserPowerOut = device.Control(pin=16, name='laser')
-        self.fobOutput = device.Control(pin=0, name='fob')
+        self.fobOutput = device.Control(pin=26, name='fob')
 
 def beatHeart(output=0):
     output.on()
