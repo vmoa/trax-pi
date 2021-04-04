@@ -8,11 +8,11 @@
 # See README.md for details.
 
 import argparse
-from gpiozero import DigitalInputDevice, DigitalOutputDevice
 from datetime import datetime
-from time import sleep
-import signal
+from gpiozero import DigitalInputDevice, DigitalOutputDevice
 import os
+import signal
+import threading
 
 import device
 from logger import Logger
@@ -40,20 +40,26 @@ class TraxGpio:
         self.laserPowerOut = device.Control(pin=16, name='laser')
         self.fobOutput = device.Control(pin=26, name='fob')
 
-def beatHeart(output=0):
-    output.on()
-    sleep(0.1)
-    output.off()
-    sleep(0.05)
-    output.on()
-    sleep(0.1)
-    output.off()
+def beatHeart(output=0, step=0):
+    if (step == 0):
+        output.on()
+        threading.Timer(0.1, beatHeart, [output,1]).start()
+    elif (step == 1):
+        output.off()
+        threading.Timer(0.05, beatHeart, [output,2]).start()
+    elif (step == 2):
+        output.on()
+        threading.Timer(0.1, beatHeart, [output,3]).start()
+    elif (step == 3):
+        output.off()
+    else:
+        logger.error("WTF? beatHeart() called with step %".format(step))
 
-def alarmHandler(signum,frame):
+def perSecond():
     beatHeart(gpio.heartLed.device)
     if (int(datetime.now().second) % statusInterval == 0):
         logger.info(device.printStatus())
-
+    threading.Timer(1.0, perSecond).start()  # Redispatch self
 
 def main():
     global logger
@@ -67,19 +73,17 @@ def main():
     global gpio
     gpio = TraxGpio()
 
-    # Install alarm hanlder
-    signal.signal(signal.SIGALRM, alarmHandler)
-    signal.alarm(heartInterval)
+    # Start the self perpetuating per second timer
+    perSecond()
 
     logger.info(device.printStatus())
 
     if (args.test_mode):
         test = test_mode.TestMode()
 
-    # Interrupt loop
+    # Loop forever
     while True:
         signal.pause()
-        signal.alarm(heartInterval)
 
 if __name__ == "__main__":
     main()
