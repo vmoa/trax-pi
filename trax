@@ -10,12 +10,13 @@
 import argparse
 from datetime import datetime
 from gpiozero import DigitalInputDevice, DigitalOutputDevice
+import logging
 import os
 import signal
+import sys
 import threading
 
 import device
-from logger import Logger
 import test_mode
 import util
 
@@ -26,7 +27,7 @@ statusInterval = 60     # Seconds between status updates without input changes
 # Hard coded GPIO setup -- should these be in a dict?
 class TraxGpio:
     def __init__(self):
-        self.weatherOk = device.Sensor(pin=4, name='wx', logger=logger);
+        self.weatherOk = device.Sensor(pin=4, name='wx');
         self.bldgPowerIn = device.Sensor(pin=17, name='bldg');
         self.mountPowerIn = device.Sensor(pin=22, name='mntin');
         self.roofPowerIn = device.Sensor(pin=27, name='roofin');
@@ -34,7 +35,7 @@ class TraxGpio:
         self.roofOpen = device.Sensor(pin=23, name='open');
         self.roofClosed = device.Sensor(pin=24, name='close');
 
-        self.heartLed = device.Control(pin=13, name='heart', logger=logger)
+        self.heartLed = device.Control(pin=13, name='heart')
         self.mountPowerOut = device.Control(pin=6, name='mntout', active_high=False)
         self.roofPowerOut = device.Control(pin=5, name='roofout', active_high=False)
         self.laserPowerOut = device.Control(pin=16, name='laser')
@@ -53,22 +54,31 @@ def beatHeart(output=0, step=0):
     elif (step == 3):
         output.off()
     else:
-        logger.error("WTF? beatHeart() called with step %".format(step))
+        logging.error("WTF? beatHeart() called with step %".format(step))
 
 def perSecond():
-    beatHeart(gpio.heartLed.device)
+    if (int(datetime.now().second) % 2 == 0):
+        beatHeart(gpio.heartLed.device)
     if (int(datetime.now().second) % statusInterval == 0):
-        logger.info(device.printStatus())
+        logging.info(device.printStatus())
     threading.Timer(1.0, perSecond).start()  # Redispatch self
 
 def main():
-    global logger
-    logger = Logger()       # Global logger object; initialized 
-    logger.info("Initializing T-Rax for the Raspberry Pi", version)
+
+    default_logfile = '/var/log/trax.log'
 
     parser = argparse.ArgumentParser(description='T-Rax roof controller.')
     parser.add_argument('--test-mode', dest='test_mode', action='store_true', help='enter test mode')
+    parser.add_argument('--log-file', '-L', dest='logfile', action='store', help='log filename (default {})'.format(default_logfile))
     args = parser.parse_args()
+
+    loggingConfig = dict(format = "%(asctime)s [%(levelname)s] %(message)s", datefmt = "%Y-%m-%d %H:%M:%S", level = logging.INFO)
+    if (sys.stdin.isatty() and not args.logfile):
+        print("TTY detected; logging to stdout")
+    else:
+        loggingConfig['filename'] = args.logfile if args.logfile else default_logfile;
+    logging.basicConfig(**loggingConfig)
+    logging.info("Initializing T-Rax for the Raspberry Pi {}".format(version))
 
     global gpio
     gpio = TraxGpio()
@@ -76,7 +86,7 @@ def main():
     # Start the self perpetuating per second timer
     perSecond()
 
-    logger.info(device.printStatus())
+    logging.info(device.printStatus())
 
     if (args.test_mode):
         test = test_mode.TestMode()

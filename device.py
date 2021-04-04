@@ -3,6 +3,7 @@
 #
 
 from gpiozero import DigitalInputDevice, DigitalOutputDevice
+import logging
 from time import sleep
 import threading
 
@@ -13,11 +14,8 @@ class Sensor:
     by_name = {}    # dict of all sensors by name
     by_pin = {}     # dict of all sensors by pin
     names = []      # array of sensor names (in order of creation for status printout)
-    global_logger = 0   # local copy of global object
 
-    def __init__(self, pin, name, pull_up=False, active_state=True, bounce_time=0.1, when_activated=0, when_deactivated=0, logger=0):
-        if (logger):
-            Sensor.global_logger = logger
+    def __init__(self, pin, name, pull_up=False, active_state=True, bounce_time=0.1, when_activated=0, when_deactivated=0):
         # TODO throw exception if pin not set
         self.name = name
         self.device = DigitalInputDevice(pin=pin, pull_up=pull_up, bounce_time=bounce_time)
@@ -39,10 +37,10 @@ class Sensor:
 
     # Default callbacks; override at instance creation or by setting <var>.device.when_[de]activated
     def activated(self):
-        Sensor.global_logger.info(printStatus())
+        logging.info(printStatus())
 
     def deactivated(self):
-        Sensor.global_logger.info(printStatus())
+        logging.info(printStatus())
 
 
 class Control:
@@ -50,11 +48,8 @@ class Control:
     by_name = {}    # dict of all controls by name
     by_pin = {}     # dict of all controls by pin
     names = []      # array of control names (in order of creation for status printout)
-    global_logger = 0   # local copy of global object
 
-    def __init__(self, pin, name, active_high=True, initial_value=False, logger=0):
-        if (logger):
-            Control.global_logger = logger
+    def __init__(self, pin, name, active_high=True, initial_value=False):
         # TODO throw exception if pin not set
         self.name = name
         self.device = DigitalOutputDevice(pin=pin, active_high=active_high, initial_value=initial_value)
