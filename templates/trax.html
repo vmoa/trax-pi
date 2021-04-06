@@ -146,18 +146,45 @@
         </style>
 
         <script type="text/javascript">
+
+            // innerHTML: { tag: 'notice', data: 'msg' }
+            function set_innerHTML(e) {
+                var o = JSON.parse(e.data);
+                console.log("innerHTML: " + o.tag + " " + o.data)
+                document.getElementById(o.tag).innerHTML = o.data;
+            }
+
+            // background-color: { tag: 'xyz_button', data: '#FF0800' }
+            function set_bgcolor(e) {
+                var o = JSON.parse(e.data);
+                console.log("background_color: " + o.tag + " " + o.data)
+                document.getElementById(o.tag).style.backgroundColor = o.data;
+            }
+
+            // color: { tag: 'xyz_button', data: '#FF0800' }
+            function set_fgcolor(e) {
+                var o = JSON.parse(e.data);
+                console.log("color: " + o.tag + " " + o.data)
+                document.getElementById(o.tag).style.color = o.data;
+            }
+
+            // Connect to SSE source and register event handlers (listeners)
             if (typeof(EventSource) !== "undefined") {
-                    //create an object, passing it the name and location of the server side script
+                    // Create an SSE EventSource and connect to URL
                     var eSource = new EventSource("connect");
-                    //detect message receipt
-                    eSource.onmessage = function(event) {
-                            //write the received data to the page -- super simple test
-                            document.getElementById("notice").innerHTML = event.data;
-                    };
+                    // Register message handlers
+                    eSource.addEventListener("innerHTML", set_innerHTML);
+                    eSource.addEventListener("bgcolor", set_bgcolor);
+                    eSource.addEventListener("fgcolor", set_fgcolor);
+                    //eSource.onmessage = function(event) {
+                    //        //write the received data to the page -- super simple test
+                    //        document.getElementById("notice").innerHTML = event.data;
+                    //};
             }
             else {
                     document.getElementById("notice").innerHTML="Whoops! Your browser does<br/>not receive server-sent events.";
             }
+
         </script>
 
     </head>
@@ -170,23 +197,23 @@
 
         <div id="container">
 
-            <div class="title_bar" name="title_bar" style="top:0px; left:0px">&nbsp;T-Rax &mdash; RFO EAST WING ROOF CONTROL</div>
+            <div class="title_bar" id="title_bar" style="top:0px; left:0px">&nbsp;T-Rax &mdash; RFO EAST WING ROOF CONTROL</div>
 
             <div class="tag_centered" style="top:30px; left:50px">ROOF POSITION</div>
-            <div class="indicator_wide" name="roof_position" style="top:46px; left:60px">UNKNOWN</div>
+            <div class="indicator_wide" id="roof_position" style="top:46px; left:60px">UNKNOWN</div>
 
             <div class="tag_centered" style="top:100px; left:50px">MOUNT POSITION</div>
-            <div class="indicator_wide" name="mount_position" style="top:116px; left:60px">UNKNOWN</div>
+            <div class="indicator_wide" id="mount_position" style="top:116px; left:60px">UNKNOWN</div>
 
             <div class="tag_centered" style="top:170px; left:50px">POWER STATUS</div>
             <div class="tag_right" style="top:198px; left:0px">BUILDING PWR</div>
-            <div class="indicator_narrow" name="building_pwr" style="top:190px; left:125px">UNK</div>
+            <div class="indicator_narrow" id="building_pwr" style="top:190px; left:125px">UNK</div>
 
             <div class="tag_right" style="top:248px; left:0px">ROOF PWR</div>
-            <div class="indicator_narrow" name="roof_pwr" style="top:240px; left:125px">UNK</div>
+            <div class="indicator_narrow" id="roof_pwr" style="top:240px; left:125px">UNK</div>
 
             <div class="tag_right" style="top:298px; left:0px">MOUNT PWR</div>
-            <div class="indicator_narrow" name="mount_pwr" style="top:290px; left:125px">UNK</div>
+            <div class="indicator_narrow" id="mount_pwr" style="top:290px; left:125px">UNK</div>
 
             <div class="notice_box" id="notice" style="top:28px; left:220px">
                 Connecting to T-Rax...<br/>
@@ -195,15 +222,15 @@
             </div>
 
             <div class="tag_right" style="top:96px; left:175px; font-size:17px">Roof Power</div>
-            <div class="button_normal" name="roof_pwr_on" style="top:86px; left:300px; background-color:#00FF00; color:black">ON</div>
-            <div class="button_normal" name="roof_pwr_off" style="top:86px; left:365px; background-color:#FF0800; color:yellow">OFF</div>
+            <div class="button_normal" id="roof_pwr_on" style="top:86px; left:300px; background-color:#00FF00; color:black">ON</div>
+            <div class="button_normal" id="roof_pwr_off" style="top:86px; left:365px; background-color:#FF0800; color:yellow">OFF</div>
 
             <div class="tag_right" style="top:146px; left:175px; font-size:17px">Mount Power</div>
-            <div class="button_normal" name="mount_pwr_on" style="top:136px; left:300px; background-color:#00FF00; color:black">ON</div>
-            <div class="button_normal" name="roof_pwr_off" style="top:136px; left:365px; background-color:#FF0800; color:yellow">OFF</div>
+            <div class="button_normal" id="mount_pwr_on" style="top:136px; left:300px; background-color:#00FF00; color:black">ON</div>
+            <div class="button_normal" id="roof_pwr_off" style="top:136px; left:365px; background-color:#FF0800; color:yellow">OFF</div>
 
-            <div class="button_start_stop" name="start_stop" style="top:195px; left:265px; ">START STOP</div>
-            <div class="button_emergency_stop" name="emergency_stop" style="top:280px; left:260px">EMERGENCY STOP</div>
+            <div class="button_start_stop" id="start_stop" style="top:195px; left:265px; ">START STOP</div>
+            <div class="button_emergency_stop" id="emergency_stop" style="top:280px; left:260px">EMERGENCY STOP</div>
 
         </div>
 
