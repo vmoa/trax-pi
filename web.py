@@ -27,22 +27,32 @@ class MessageAnnouncer:
 
     def listen(self):
         """Consumers of the queue listen() for queue updates"""
-        q = queue.Queue(maxsize=10)
+        q = queue.Queue(maxsize=32)
         self.listeners.append(q)
-        colorUp()
+        threading.Timer(1.0, colorUp).start()  # Dispatch
         return q
 
-    def announce(self, msg):
-        """Producers of queue messages announce() them here"""
+    def send(self, msg='', id='', type='', data=''):
+        """Producers of queue messages send() them here"""
+        if (not msg):
+            msg = format_sse(data=json.dumps( { 'id':id, 'data':data } ), event=type)
         for i in reversed(range(len(self.listeners))):
             try:
                 self.listeners[i].put_nowait(msg)
             except queue.Full:
                 del self.listeners[i]
 
+    def stream(self):
+        """Loops on the `browser` queue and "yields" any message posted to the queue."""
+        messages = self.listen()  # returns a queue.Queue
+        while True:
+            msg = messages.get()  # blocks until a new message arrives
+            # print("Yielding", msg)
+            yield msg
+
 def format_sse(data: str, event=None) -> str:
     """Format `data` with optional `event` as a Server Side Event"""
-    # Consider putting this in announce() above?
+    # Consider putting this in send() above?
     msg = f'data: {data}\n\n'
     if event is not None:
         msg = f'event: {event}\n{msg}'
@@ -51,16 +61,19 @@ def format_sse(data: str, event=None) -> str:
 
 # Silly loop to send something every second
 def perSecond():
-    msg = json.dumps( { 'tag':'notice', 'data':datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") } )
-    fmsg = format_sse(data=msg, event='innerHTML')
-    #print(fmsg)
-    announcer.announce(fmsg)
+    browser.send(id='notice', type='innerHTML', data=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     threading.Timer(1.0, perSecond).start()  # Redispatch self
 
+def fizzbin(id, type, data):
+    msg = format_sse(data=json.dumps( { 'id':id, 'data':data } ), event=type)
+    return msg
 
 #
 # Register URL callbacks
 #
+
+# Instantiate the message queue
+browser = MessageAnnouncer()
 
 app = flask.Flask(__name__)
 
@@ -72,45 +85,33 @@ def top():
 @app.route('/ping')
 def ping():
     msg = format_sse(data='pong')
-    announcer.announce(msg=msg)
+    browser.send(msg=msg)
     return {}, 200
 
 @app.route('/connect', methods=['GET'])
 def connect():
     """
     This function starts in a different thread (I think) for each browser that connects,
-    listens on the `announcer` queue and sends any messages that are posted on it.
+    listens on the `browser` queue and sends any messages that are posted to it.
     """
-
-    def stream():
-        """Loop on the `announcer` queue and "yields" any message posted to the queue."""
-        messages = announcer.listen()  # returns a queue.Queue
-        while True:
-            msg = messages.get()  # blocks until a new message arrives
-            yield msg
-
-    return flask.Response(stream(), mimetype='text/event-stream')
+    return flask.Response(browser.stream(), mimetype='text/event-stream')
 
 
-
-# Instantiate the message queue
-announcer = MessageAnnouncer()
 
 back_on_green = "background-color:#00FF00; color:black"
 yellow_on_red = "background-color:#FF0800; color:yellow"
+color = { 'black':'black', 'yellow':'yellow', 'green':'#00FF00', 'red':'#FF0800' }
 
 def colorUp():
     print("colorUp")
-    announcer.announce(format_sse(event='innerHTML', data=json.dumps( { 'tag':'notice', 'data':'Connected!' } )))
-    announcer.announce(format_sse(event='bgcolor', data=json.dumps( { 'tag':'roof_position', 'data':'#00FF00' } )))
-    announcer.announce(format_sse(event='fgcolor', data=json.dumps( { 'tag':'roof_position', 'data':'black' } )))
-    announcer.announce(format_sse(event='innerHTML', data=json.dumps( { 'tag':'roof_position', 'data':'OPEN' } )))
+    browser.send(id='notice', type='innerHTML', data='Connected!')
+    browser.send(id='roof_position', type='bgcolor', data=color['green'])
+    browser.send(id='roof_position', type='fgcolor', data=color['black'])
+    browser.send(id='roof_position', type='innerHTML', data='OPEN')
 
-    announcer.announce(format_sse(event='bgcolor', data=json.dumps( { 'tag':'mount_position', 'data':'#FF0800' } )))
-    announcer.announce(format_sse(event='fgcolor', data=json.dumps( { 'tag':'mount_position', 'data':'yellow' } )))
-    announcer.announce(format_sse(event='innerHTML', data=json.dumps( { 'tag':'mount_position', 'data':'PARKED' } )))
-
-#threading.Timer(2.4, colorUp).start()  # Set colors
+    browser.send(id='mount_position', type='bgcolor', data=color['red'])
+    browser.send(id='mount_position', type='fgcolor', data=color['yellow'])
+    browser.send(id='mount_position', type='innerHTML', data='PARKED')
 
 # Start it all up
 perSecond()

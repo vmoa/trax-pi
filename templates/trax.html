@@ -147,25 +147,25 @@
 
         <script type="text/javascript">
 
-            // innerHTML: { tag: 'notice', data: 'msg' }
+            // event:innerHTML { id: 'notice', data: 'msg' }
             function set_innerHTML(e) {
                 var o = JSON.parse(e.data);
-                console.log("innerHTML: " + o.tag + " " + o.data)
-                document.getElementById(o.tag).innerHTML = o.data;
+                //console.log("document.getElementById("+o.id+").innerHTML = "+o.data);
+                document.getElementById(o.id).innerHTML = o.data;
             }
 
-            // background-color: { tag: 'xyz_button', data: '#FF0800' }
+            // event:bgcolor: { id: 'xyz_button', data: '#FF0800' }
             function set_bgcolor(e) {
                 var o = JSON.parse(e.data);
-                console.log("background_color: " + o.tag + " " + o.data)
-                document.getElementById(o.tag).style.backgroundColor = o.data;
+                //console.log("document.getElementById("+o.id+").style.backgroundColor = "+o.data);
+                document.getElementById(o.id).style.backgroundColor = o.data;
             }
 
-            // color: { tag: 'xyz_button', data: '#FF0800' }
+            // event:fgcolor { id: 'xyz_button', data: '#FF0800' }
             function set_fgcolor(e) {
                 var o = JSON.parse(e.data);
-                console.log("color: " + o.tag + " " + o.data)
-                document.getElementById(o.tag).style.color = o.data;
+                //console.log("document.getElementById("+o.id+").style.color = "+o.data);
+                document.getElementById(o.id).style.color = o.data;
             }
 
             // Connect to SSE source and register event handlers (listeners)
@@ -176,10 +176,6 @@
                     eSource.addEventListener("innerHTML", set_innerHTML);
                     eSource.addEventListener("bgcolor", set_bgcolor);
                     eSource.addEventListener("fgcolor", set_fgcolor);
-                    //eSource.onmessage = function(event) {
-                    //        //write the received data to the page -- super simple test
-                    //        document.getElementById("notice").innerHTML = event.data;
-                    //};
             }
             else {
                     document.getElementById("notice").innerHTML="Whoops! Your browser does<br/>not receive server-sent events.";
