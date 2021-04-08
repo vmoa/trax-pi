@@ -147,6 +147,11 @@
 
         <script type="text/javascript">
 
+            var black  = 'black';
+            var yellow = 'yellow';
+            var green  = '#00FF00';
+            var red    = '#FF0800';
+
             // event:innerHTML { id: 'notice', data: 'msg' }
             function set_innerHTML(e) {
                 var o = JSON.parse(e.data);
@@ -154,18 +159,56 @@
                 document.getElementById(o.id).innerHTML = o.data;
             }
 
-            // event:bgcolor: { id: 'xyz_button', data: '#FF0800' }
+            // event:bgcolor: { id: 'indicatorX', data: '#FF0800' }
             function set_bgcolor(e) {
                 var o = JSON.parse(e.data);
                 //console.log("document.getElementById("+o.id+").style.backgroundColor = "+o.data);
                 document.getElementById(o.id).style.backgroundColor = o.data;
             }
 
-            // event:fgcolor { id: 'xyz_button', data: '#FF0800' }
+            // event:fgcolor { id: 'indicatorX', data: '#FF0800' }
             function set_fgcolor(e) {
                 var o = JSON.parse(e.data);
                 //console.log("document.getElementById("+o.id+").style.color = "+o.data);
                 document.getElementById(o.id).style.color = o.data;
+            }
+
+            // event:indicator { id: 'indicator_y', status: 'on|off|open|midway|closed|parked|notparked' }
+            function update_indicator(e) {
+                var o = JSON.parse(e.data);
+                console.log("update_indicator() set "+o.id+" to "+o.status);
+                element = document.getElementById(o.id);
+                if (o.id == "roof_position" && o.status == 'open') {
+                    element.style.backgroundColor = green;
+                    element.style.color = black;
+                    element.innerHTML = 'OPEN';
+                } else if (o.id == "roof_position" && o.status == 'midway') {
+                    element.style.backgroundColor = yellow;
+                    element.style.color = black;
+                    element.innerHTML = 'MIDWAY';
+                } else if (o.id == "roof_position" && o.status == 'closed') {
+                    element.style.backgroundColor = red;
+                    element.style.color = yellow;
+                    element.innerHTML = 'CLOSED';
+                } else if (o.id == "mount_position" && o.status == 'parked') {
+                    element.style.backgroundColor = green;
+                    element.style.color = black;
+                    element.innerHTML = 'PARKED';
+                } else if (o.id == "mount_position" && o.status == 'notparked') {
+                    element.style.backgroundColor = red;
+                    element.style.color = yellow;
+                    element.innerHTML = 'NOT PARKED';
+                } else if (o.status == 'on') {
+                    element.style.backgroundColor = green;
+                    element.style.color = black;
+                    element.innerHTML = 'ON';
+                } else if (o.status == 'off') {
+                    element.style.backgroundColor = red;
+                    element.style.color = yellow;
+                    element.innerHTML = 'OFF';
+                } else {
+                    console.log("update_indicator(): unknown event id:"+o.id+" status:"+o.status);
+                }
             }
 
             // Connect to SSE source and register event handlers (listeners)
@@ -176,6 +219,7 @@
                     eSource.addEventListener("innerHTML", set_innerHTML);
                     eSource.addEventListener("bgcolor", set_bgcolor);
                     eSource.addEventListener("fgcolor", set_fgcolor);
+                    eSource.addEventListener("indicator", update_indicator);
             }
             else {
                     document.getElementById("notice").innerHTML="Whoops! Your browser does<br/>not receive server-sent events.";

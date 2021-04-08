@@ -22,21 +22,28 @@ import flask
 class MessageAnnouncer:
     """Implement a queue for messages to be sent to connected browsers"""
 
-    def __init__(self, welcomeFunc):
+    def __init__(self, *welcomeFunc):
         self.listeners = []
+        if (welcomeFunc):
+            self.setWeldome(welcomeFunc)
+
+    def setWelcome(self, welcomeFunc):
         self.welcomeFunc = welcomeFunc
 
     def listen(self):
         """Consumers of the queue listen() for queue updates"""
         q = queue.Queue(maxsize=32)
         self.listeners.append(q)
-        threading.Timer(1.0, self.welcomeFunc).start()  # Dispatch our welcome function (we need a better name)
+        if (self.welcomeFunc):
+            threading.Timer(1.0, self.welcomeFunc).start()  # Dispatch our welcome function (we need a better name)
         return q
 
-    def send(self, msg='', id='', type='', data=''):
+    def send(self, **kwargs):
         """Producers of queue messages send() them here"""
-        if (not msg):
-            msg = self.format_sse(data=json.dumps( { 'id':id, 'data':data } ), event=type)
+        if ('msg' in kwargs):
+            msg = kwargs['msg']
+        else:
+            msg = self.format_sse(event=kwargs['type'], data=json.dumps(kwargs))
         for i in reversed(range(len(self.listeners))):
             try:
                 self.listeners[i].put_nowait(msg)
@@ -59,3 +66,5 @@ class MessageAnnouncer:
             msg = f'event: {event}\n{msg}'
         return msg
 
+# Instantiate the queue
+browser = MessageAnnouncer()

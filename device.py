@@ -8,6 +8,7 @@ from time import sleep
 import threading
 
 import util
+import web
 
 class Sensor:
     sensors = []    # array of all sensor instances (in order of creation for status printout)
@@ -75,6 +76,7 @@ class Control:
 
 
 def printStatus():
+    updateBrowser()
     status = ''
     ### print(util.timestamp(), threading.get_ident(), end=' ')
     for sensor in Sensor.sensors:
@@ -88,3 +90,34 @@ def printStatus():
         else:
             status += "({}) ".format(control.name)
     return(status)
+
+# TODO: make this a callback for any sensor change
+# TODO: (maybe) optimize to only send updates for changes?
+def updateBrowser():
+    """Decorate the indicators on the web browser"""
+    if (Sensor.by_name['close'].isOn()):
+        web.browser.send(type='indicator', id='roof_position', status='closed')
+    elif (Sensor.by_name['open'].isOn()):
+        web.browser.send(type='indicator', id='roof_position', status='open')
+    else:
+        web.browser.send(type='indicator', id='roof_position', status='midway')
+
+    if (Sensor.by_name['park'].isOn()):
+        web.browser.send(type='indicator', id='mount_position', status='parked')
+    else:
+        web.browser.send(type='indicator', id='mount_position', status='notparked')
+
+    if (Sensor.by_name['bldg'].isOn()):
+        web.browser.send(type='indicator', id='building_pwr', status='on')
+    else:
+        web.browser.send(type='indicator', id='building_pwr', status='off')
+
+    if (Sensor.by_name['roofin'].isOn()):
+        web.browser.send(type='indicator', id='roof_pwr', status='on')
+    else:
+        web.browser.send(type='indicator', id='roof_pwr', status='off')
+
+    if (Sensor.by_name['mntin'].isOn()):
+        web.browser.send(type='indicator', id='mount_pwr', status='on')
+    else:
+        web.browser.send(type='indicator', id='mount_pwr', status='off')

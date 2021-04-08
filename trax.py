@@ -60,7 +60,7 @@ def beatHeart(output=0, step=0):
         logging.error("WTF? beatHeart() called with step %".format(step))
 
 def perSecond():
-    browser.send(id='notice', type='innerHTML', data=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    web.browser.send(id='notice', type='innerHTML', data=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     if (int(datetime.datetime.now().second) % 2 == 0):
         beatHeart(gpio.heartLed.device)
     if (int(datetime.datetime.now().second) % statusInterval == 0):
@@ -107,17 +107,38 @@ logging.info(device.printStatus())
 color = { 'black':'black', 'yellow':'yellow', 'green':'#00FF00', 'red':'#FF0800' }
 
 def colorUp():
+    """Decorate the indicators on the web browser"""
     print("colorUp")
-    browser.send(id='notice', type='innerHTML', data='Connected!')
-    browser.send(id='roof_position', type='bgcolor', data=color['green'])
-    browser.send(id='roof_position', type='fgcolor', data=color['black'])
-    browser.send(id='roof_position', type='innerHTML', data='OPEN')
+    web.browser.send(id='notice', type='innerHTML', data='Connected!')
 
-    browser.send(id='mount_position', type='bgcolor', data=color['red'])
-    browser.send(id='mount_position', type='fgcolor', data=color['yellow'])
-    browser.send(id='mount_position', type='innerHTML', data='PARKED')
+    if (gpio.roofClosed.isOn()):
+        web.browser.send(type='indicator', id='roof_position', status='closed')
+    elif (gpio.roofOpen.isOn()):
+        web.browser.send(type='indicator', id='roof_position', status='open')
+    else:
+        web.browser.send(type='indicator', id='roof_position', status='midway')
 
-browser = web.MessageAnnouncer(welcomeFunc = colorUp)
+    if (gpio.mountParked.isOn()):
+        web.browser.send(type='indicator', id='mount_position', status='parked')
+    else:
+        web.browser.send(type='indicator', id='mount_position', status='notparked')
+
+    if (gpio.bldgPowerIn.isOn()):
+        web.browser.send(type='indicator', id='building_pwr', status='on')
+    else:
+        web.browser.send(type='indicator', id='building_pwr', status='off')
+
+    if (gpio.roofPowerIn.isOn()):
+        web.browser.send(type='indicator', id='roof_pwr', status='on')
+    else:
+        web.browser.send(type='indicator', id='roof_pwr', status='off')
+
+    if (gpio.mountPowerIn.isOn()):
+        web.browser.send(type='indicator', id='mount_pwr', status='on')
+    else:
+        web.browser.send(type='indicator', id='mount_pwr', status='off')
+
+web.browser.setWelcome(colorUp)
 
 app = flask.Flask(__name__)
 
@@ -131,7 +152,7 @@ def connect():
     This function starts in a different thread (I think) for each browser that connects,
     listens on the `browser` queue and sends any messages that are posted to it.
     """
-    return flask.Response(browser.stream(), mimetype='text/event-stream')
+    return flask.Response(web.browser.stream(), mimetype='text/event-stream')
 
 # Start the self perpetuating per second timer
 perSecond()
