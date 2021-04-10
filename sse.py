@@ -1,12 +1,7 @@
 #!/usr/bin/python3 URL callbacks
 #
-# Flask based web frontend for trax
-
-# One shot:
-# FLASK_APP=web.py flask run --host=0.0.0.0 &
-# Auto-reloading:
-# FLASK_ENV=development FLASK_APP=web.py flask run --host=0.0.0.0 &
-
+# Message queue implementation of Server Send Events (SSE)
+# cobbled from https://maxhalford.github.io/blog/flask-sse-no-deps/
 
 import datetime
 import json
@@ -17,25 +12,17 @@ import threading
 
 import flask
 
-# Message queue cobbled from https://maxhalford.github.io/blog/flask-sse-no-deps/
 
 class MessageAnnouncer:
-    """Implement a queue for messages to be sent to connected browsers"""
+    """Implement a queue and dispatch SSE events to connected browsers"""
 
-    def __init__(self, *welcomeFunc):
+    def __init__(self):
         self.listeners = []
-        if (welcomeFunc):
-            self.setWeldome(welcomeFunc)
-
-    def setWelcome(self, welcomeFunc):
-        self.welcomeFunc = welcomeFunc
 
     def listen(self):
         """Consumers of the queue listen() for queue updates"""
         q = queue.Queue(maxsize=32)
         self.listeners.append(q)
-        if (self.welcomeFunc):
-            threading.Timer(1.0, self.welcomeFunc).start()  # Dispatch our welcome function (we need a better name)
         return q
 
     def send(self, **kwargs):

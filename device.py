@@ -2,13 +2,16 @@
 # Class Sensor to extend DigitalInputDevice for T-Rax
 #
 
+import datetime
 from gpiozero import DigitalInputDevice, DigitalOutputDevice
 import logging
 from time import sleep
 import threading
 
 import util
-import web
+import sse
+
+statusInterval = 60     # Seconds between status updates without input changes
 
 class Sensor:
     sensors = []    # array of all sensor instances (in order of creation for status printout)
@@ -91,33 +94,75 @@ def printStatus():
             status += "({}) ".format(control.name)
     return(status)
 
+def beatHeart(output=0, step=0):
+    if (step == 0):
+        output.on()
+        threading.Timer(0.1, beatHeart, [output,1]).start()
+    elif (step == 1):
+        output.off()
+        threading.Timer(0.05, beatHeart, [output,2]).start()
+    elif (step == 2):
+        output.on()
+        threading.Timer(0.1, beatHeart, [output,3]).start()
+    elif (step == 3):
+        output.off()
+    else:
+        logging.error("WTF? beatHeart() called with step %".format(step))
+
+
+def sendNotice(msg):
+    """Update the notice area on the browser"""
+    sse.browser.send(id='notice', type='innerHTML', data=msg)
+
+
 # TODO: make this a callback for any sensor change
 # TODO: (maybe) optimize to only send updates for changes?
 def updateBrowser():
     """Decorate the indicators on the web browser"""
     if (Sensor.by_name['close'].isOn()):
-        web.browser.send(type='indicator', id='roof_position', status='closed')
+        sse.browser.send(type='indicator', id='roof_position', status='closed')
     elif (Sensor.by_name['open'].isOn()):
-        web.browser.send(type='indicator', id='roof_position', status='open')
+        sse.browser.send(type='indicator', id='roof_position', status='open')
     else:
-        web.browser.send(type='indicator', id='roof_position', status='midway')
+        sse.browser.send(type='indicator', id='roof_position', status='midway')
 
     if (Sensor.by_name['park'].isOn()):
-        web.browser.send(type='indicator', id='mount_position', status='parked')
+        sse.browser.send(type='indicator', id='mount_position', status='parked')
     else:
-        web.browser.send(type='indicator', id='mount_position', status='notparked')
+        sse.browser.send(type='indicator', id='mount_position', status='notparked')
 
     if (Sensor.by_name['bldg'].isOn()):
-        web.browser.send(type='indicator', id='building_pwr', status='on')
+        sse.browser.send(type='indicator', id='building_pwr', status='on')
     else:
-        web.browser.send(type='indicator', id='building_pwr', status='off')
+        sse.browser.send(type='indicator', id='building_pwr', status='off')
 
     if (Sensor.by_name['roofin'].isOn()):
-        web.browser.send(type='indicator', id='roof_pwr', status='on')
+        sse.browser.send(type='indicator', id='roof_pwr', status='on')
     else:
-        web.browser.send(type='indicator', id='roof_pwr', status='off')
+        sse.browser.send(type='indicator', id='roof_pwr', status='off')
 
     if (Sensor.by_name['mntin'].isOn()):
-        web.browser.send(type='indicator', id='mount_pwr', status='on')
+        sse.browser.send(type='indicator', id='mount_pwr', status='on')
     else:
-        web.browser.send(type='indicator', id='mount_pwr', status='off')
+        sse.browser.send(type='indicator', id='mount_pwr', status='off')
+
+
+def initialConnect():
+    """Send intial connect message to browser"""
+    sendNotice("Connected!<br/>Welcome to T-Rax!")
+    updateBrowser()
+
+
+
+def perSecond():
+    """Callback that runs every second to perform housekeeping duties"""
+    # Send a browser update so user knows we're connected
+    sendNotice(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    #sse.browser.send(id='notice', type='innerHTML', data=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    # Blink heartbeat LED
+    if (int(datetime.datetime.now().second) % 2 == 0):
+        beatHeart(Control.by_name['heart'].device)
+    # Log status
+    if (int(datetime.datetime.now().second) % statusInterval == 0):
+        logging.info(printStatus())
+    threading.Timer(1.0, perSecond).start()  # Redispatch self
