@@ -8,8 +8,8 @@ import logging
 from time import sleep
 import threading
 
+import browser
 import util
-import sse
 
 statusInterval = 60     # Seconds between status updates without input changes
 
@@ -79,7 +79,6 @@ class Control:
 
 
 def printStatus():
-    updateBrowser()
     status = ''
     ### print(util.timestamp(), threading.get_ident(), end=' ')
     for sensor in Sensor.sensors:
@@ -110,59 +109,13 @@ def beatHeart(output=0, step=0):
         logging.error("WTF? beatHeart() called with step %".format(step))
 
 
-def sendNotice(msg):
-    """Update the notice area on the browser"""
-    sse.browser.send(id='notice', type='innerHTML', data=msg)
-
-
-# TODO: make this a callback for any sensor change
-# TODO: (maybe) optimize to only send updates for changes?
-def updateBrowser():
-    """Decorate the indicators on the web browser"""
-    if (Sensor.by_name['close'].isOn()):
-        sse.browser.send(type='indicator', id='roof_position', status='closed')
-    elif (Sensor.by_name['open'].isOn()):
-        sse.browser.send(type='indicator', id='roof_position', status='open')
-    else:
-        sse.browser.send(type='indicator', id='roof_position', status='midway')
-
-    if (Sensor.by_name['park'].isOn()):
-        sse.browser.send(type='indicator', id='mount_position', status='parked')
-    else:
-        sse.browser.send(type='indicator', id='mount_position', status='notparked')
-
-    if (Sensor.by_name['bldg'].isOn()):
-        sse.browser.send(type='indicator', id='building_pwr', status='on')
-    else:
-        sse.browser.send(type='indicator', id='building_pwr', status='off')
-
-    if (Sensor.by_name['roofin'].isOn()):
-        sse.browser.send(type='indicator', id='roof_pwr', status='on')
-    else:
-        sse.browser.send(type='indicator', id='roof_pwr', status='off')
-
-    if (Sensor.by_name['mntin'].isOn()):
-        sse.browser.send(type='indicator', id='mount_pwr', status='on')
-    else:
-        sse.browser.send(type='indicator', id='mount_pwr', status='off')
-
-
-def initialConnect():
-    """Send intial connect message to browser"""
-    sendNotice("Connected!<br/>Welcome to T-Rax!")
-    updateBrowser()
-
-
-
 def perSecond():
     """Callback that runs every second to perform housekeeping duties"""
-    # Send a browser update so user knows we're connected
-    sendNotice(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    #sse.browser.send(id='notice', type='innerHTML', data=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    # Blink heartbeat LED
+    browser.browser.sendNotice(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     if (int(datetime.datetime.now().second) % 2 == 0):
         beatHeart(Control.by_name['heart'].device)
-    # Log status
+        browser.browser.updateBrowser()
     if (int(datetime.datetime.now().second) % statusInterval == 0):
         logging.info(printStatus())
     threading.Timer(1.0, perSecond).start()  # Redispatch self
+

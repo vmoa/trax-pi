@@ -16,6 +16,7 @@ import signal
 import sys
 import threading
 
+import browser
 import device
 import test_mode
 import util
@@ -89,8 +90,8 @@ def connect():
     listens on the `browser` queue in sse.py and sends any messages that are posted to it.
     """
     logging.info("Browser connected from {}".format(flask.request.remote_addr))
-    threading.Timer(0.5, device.initialConnect).start()  # Dispatch our welcome connect function
-    return flask.Response(sse.browser.stream(), mimetype='text/event-stream')
+    threading.Timer(0.5, browser.browser.initialConnect).start()  # Dispatch our welcome connect function
+    return flask.Response(sse.sse.stream(), mimetype='text/event-stream')
 
 
 

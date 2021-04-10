@@ -54,4 +54,4 @@ class MessageAnnouncer:
         return msg
 
 # Instantiate the queue
-browser = MessageAnnouncer()
+sse = MessageAnnouncer()
