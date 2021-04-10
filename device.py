@@ -53,10 +53,11 @@ class Control:
     by_pin = {}     # dict of all controls by pin
     names = []      # array of control names (in order of creation for status printout)
 
-    def __init__(self, pin, name, active_high=True, initial_value=False):
+    def __init__(self, pin, name, active_high=True, initial_value=False, toggle_delay=0.5):
         # TODO throw exception if pin not set
         self.name = name
         self.device = DigitalOutputDevice(pin=pin, active_high=active_high, initial_value=initial_value)
+        self.toggle_delay = toggle_delay
         Control.controls.append(self)
         Control.by_name[name] = self
         Control.by_pin[pin] = self
@@ -77,6 +78,15 @@ class Control:
     def isOff(self):
         return(self.device.value == 0)
 
+    def toggle(self, step=0):
+        if (step == 0):
+            logging.info("Toggle {}".format(self.name))
+            self.turnOn();
+            threading.Timer(self.toggle_delay, self.toggle, [1]).start()
+        elif (step == 1):
+            self.turnOff();
+        else:
+            logging.error("WTF? toggle() called with step %".format(step))
 
 def printStatus():
     status = ''
