@@ -110,6 +110,7 @@
                 text-align: center;
                 color: yellow;
                 font-size: 16px;
+                cursor: pointer;
             }
 
             div.button_start_stop {
@@ -125,6 +126,7 @@
                 text-align: center;
                 color: #0B00FF;
                 font-size: 20px;
+                cursor: pointer;
             }
 
             div.button_emergency_stop {
@@ -141,6 +143,7 @@
                 color: yellow;
                 font-family: sans-serif;
                 font-size: 15px;
+                cursor: pointer;
             }
 
         </style>
@@ -176,7 +179,7 @@
             // event:indicator { id: 'indicator_y', status: 'on|off|open|midway|closed|parked|notparked' }
             function update_indicator(e) {
                 var o = JSON.parse(e.data);
-                console.log("update_indicator() set "+o.id+" to "+o.status);
+                //console.log("update_indicator() set "+o.id+" to "+o.status);
                 element = document.getElementById(o.id);
                 if (o.id == "roof_position" && o.status == 'open') {
                     element.style.backgroundColor = green;
@@ -225,6 +228,13 @@
                     document.getElementById("notice").innerHTML="Whoops! Your browser does<br/>not receive server-sent events.";
             }
 
+            function doSend(url) {
+                console.log("doSend(" + url + ")")
+                var xhr = new XMLHttpRequest();
+                xhr.open("GET", url, true);
+                xhr.send(null);
+            }
+
         </script>
 
     </head>
@@ -262,15 +272,15 @@
             </div>
 
             <div class="tag_right" style="top:96px; left:175px; font-size:17px">Roof Power</div>
-            <div class="button_normal" id="roof_pwr_on" style="top:86px; left:300px; background-color:#00FF00; color:black">ON</div>
-            <div class="button_normal" id="roof_pwr_off" style="top:86px; left:365px; background-color:#FF0800; color:yellow">OFF</div>
+            <div class="button_normal" id="roof_pwr_on" style="top:86px; left:300px; background-color:#00FF00; color:black" onClick="doSend('/roofpwron')";>ON</div>
+            <div class="button_normal" id="roof_pwr_off" style="top:86px; left:365px; background-color:#FF0800; color:yellow" onClick="doSend('/roofpwroff')";>OFF</div>
 
             <div class="tag_right" style="top:146px; left:175px; font-size:17px">Mount Power</div>
-            <div class="button_normal" id="mount_pwr_on" style="top:136px; left:300px; background-color:#00FF00; color:black">ON</div>
-            <div class="button_normal" id="roof_pwr_off" style="top:136px; left:365px; background-color:#FF0800; color:yellow">OFF</div>
+            <div class="button_normal" id="mount_pwr_on" style="top:136px; left:300px; background-color:#00FF00; color:black" onClick="doSend('/mountpwron')";>ON</div>
+            <div class="button_normal" id="roof_pwr_off" style="top:136px; left:365px; background-color:#FF0800; color:yellow" onClick="doSend('/mountpwroff')";>OFF</div>
 
-            <div class="button_start_stop" id="start_stop" style="top:195px; left:265px; ">START STOP</div>
-            <div class="button_emergency_stop" id="emergency_stop" style="top:280px; left:260px">EMERGENCY STOP</div>
+            <div class="button_start_stop" id="start_stop" style="top:195px; left:265px;" onClick="doSend('/startstop')";>START STOP</div>
+            <div class="button_emergency_stop" id="emergency_stop" style="top:280px; left:260px" onClick="doSend('/STOP')";>EMERGENCY STOP</div>
 
         </div>
 

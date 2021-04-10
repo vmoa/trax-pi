@@ -93,6 +93,30 @@ def connect():
     threading.Timer(0.5, browser.browser.initialConnect).start()  # Dispatch our welcome connect function
     return flask.Response(sse.sse.stream(), mimetype='text/event-stream')
 
+@app.route('/startstop', methods=['GET'])
+def startStop():
+    """User pressed the Start/Stop button"""
+    return browser.browser.startStop()
+
+@app.route('/roofpwron', methods=['GET'])
+def roofPwrOn():
+    return('OK')
+
+@app.route('/roofpwroff', methods=['GET'])
+def roofPwrOff():
+    return('OK')
+
+@app.route('/mountpwron', methods=['GET'])
+def mountPwrOn():
+    return('OK')
+
+@app.route('/mountpwroff', methods=['GET'])
+def mountPwrOff():
+    return('OK')
+
+@app.route('/STOP', methods=['GET'])
+def emergencyStop():
+    return('OK')
 
 
 if __name__ == '__main__':

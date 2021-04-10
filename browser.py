@@ -2,9 +2,11 @@
 #
 # Callbacks are registered in trax.py because it just makes flask cleaner
 
+import logging
 import threading
 
 import device
+import flask
 import sse
 
 
@@ -52,6 +54,12 @@ class Browser:
         self.sendNotice("Connected!<br/>Welcome to T-Rax!")
         self.updateBrowser()
 
+    def startStop(self):
+        """User pressed Start/Stop button"""
+        logging.info("Browser Start/Stop pressed from {}".format(flask.request.remote_addr))
+        # TODO: put safety logic here!
+        device.Control.by_name['fob'].toggle()
+        return "Toggle"
 
 # Instantiate a browser object
 browser = Browser()
