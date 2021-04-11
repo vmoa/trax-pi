@@ -121,7 +121,7 @@ def beatHeart(output=0, step=0):
 
 def perSecond():
     """Callback that runs every second to perform housekeeping duties"""
-    browser.browser.sendNotice(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    browser.browser.sendTicker(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     if (int(datetime.datetime.now().second) % 2 == 0):
         beatHeart(Control.by_name['heart'].device)
         browser.browser.updateBrowser()

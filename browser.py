@@ -16,6 +16,10 @@ class Browser:
         """Update the notice area on the browser"""
         sse.sse.send(id='notice', type='innerHTML', data=msg)
 
+    def sendTicker(self, msg):
+        """Update the ticker on the browser"""
+        sse.sse.send(id='ticker', type='innerHTML', data=msg)
+
 
     # TODO: make this a callback for any sensor change
     # TODO: (maybe) optimize to only send updates for changes?

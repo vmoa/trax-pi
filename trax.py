@@ -85,10 +85,7 @@ def top():
 
 @app.route('/connect', methods=['GET'])
 def connect():
-    """
-    This function starts in a different thread (I think) for each browser that connects,
-    listens on the `browser` queue in sse.py and sends any messages that are posted to it.
-    """
+    """Browser connected to T-Rax; dispatch welcome message and connect brower to SSE stream"""
     logging.info("Browser connected from {}".format(flask.request.remote_addr))
     threading.Timer(0.5, browser.browser.initialConnect).start()  # Dispatch our welcome connect function
     return flask.Response(sse.sse.stream(), mimetype='text/event-stream')

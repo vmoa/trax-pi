@@ -97,6 +97,18 @@
                 font-size: 14px;
             }
 
+            /* Text area: 32 wide x 3 tall */
+            div.ticker_box {
+                position: fixed;
+                width: 188px;
+                height: 14px;
+                line-height: 14px;
+                text-align: right;
+                color: #black;
+                font-family: "Lucida Console", "Courier New", monospace;
+                font-size: 14px;
+            }
+
             div.button_normal {
                 position: fixed;
                 width: 50px;
@@ -282,6 +294,7 @@
             <div class="button_start_stop" id="start_stop" style="top:195px; left:265px;" onClick="doSend('/startstop')";>START STOP</div>
             <div class="button_emergency_stop" id="emergency_stop" style="top:280px; left:260px" onClick="doSend('/STOP')";>EMERGENCY STOP</div>
 
+            <div class="ticker_box" id="ticker" style="top:345px; left:230px">Tick Tock</div>
         </div>
 
     </body>
