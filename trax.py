@@ -96,26 +96,21 @@ def connect():
 @app.route('/startstop', methods=['GET'])
 def startStop():
     """User pressed the Start/Stop button"""
-    return browser.browser.startStop()
+    return browser.browser.startStop(app)
 
-@app.route('/roofpwron', methods=['GET'])
-def roofPwrOn():
-    return('OK')
-
-@app.route('/roofpwroff', methods=['GET'])
+@app.route('/roofpwr', methods=['GET'])
 def roofPwrOff():
+    return browser.browser.roofPower(app)
     return('OK')
 
-@app.route('/mountpwron', methods=['GET'])
+@app.route('/mountpwr', methods=['GET'])
 def mountPwrOn():
-    return('OK')
-
-@app.route('/mountpwroff', methods=['GET'])
-def mountPwrOff():
+    return browser.browser.mountPower(app)
     return('OK')
 
 @app.route('/STOP', methods=['GET'])
 def emergencyStop():
+    return browser.browser.emergencyStop(app)
     return('OK')
 
 

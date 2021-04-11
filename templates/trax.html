@@ -266,18 +266,18 @@
             <div class="indicator_narrow" id="mount_pwr" style="top:290px; left:125px">UNK</div>
 
             <div class="notice_box" id="notice" style="top:28px; left:220px">
-                Connecting to T-Rax...<br/>
-                1 3 5 7 9 1 3 5 7 9 1 <br/>
-                &nbsp;2 4 6 8 0 2 4 6 8 0 2<br/>
+                ======================<br/>
+                = Connecting to TRax =<br/>
+                ======================<br/>
             </div>
 
             <div class="tag_right" style="top:96px; left:175px; font-size:17px">Roof Power</div>
-            <div class="button_normal" id="roof_pwr_on" style="top:86px; left:300px; background-color:#00FF00; color:black" onClick="doSend('/roofpwron')";>ON</div>
-            <div class="button_normal" id="roof_pwr_off" style="top:86px; left:365px; background-color:#FF0800; color:yellow" onClick="doSend('/roofpwroff')";>OFF</div>
+            <div class="button_normal" id="roof_pwr_on" style="top:86px; left:300px; background-color:#00FF00; color:black" onClick="doSend('/roofpwr?on')";>ON</div>
+            <div class="button_normal" id="roof_pwr_off" style="top:86px; left:365px; background-color:#FF0800; color:yellow" onClick="doSend('/roofpwr?off')";>OFF</div>
 
             <div class="tag_right" style="top:146px; left:175px; font-size:17px">Mount Power</div>
-            <div class="button_normal" id="mount_pwr_on" style="top:136px; left:300px; background-color:#00FF00; color:black" onClick="doSend('/mountpwron')";>ON</div>
-            <div class="button_normal" id="roof_pwr_off" style="top:136px; left:365px; background-color:#FF0800; color:yellow" onClick="doSend('/mountpwroff')";>OFF</div>
+            <div class="button_normal" id="mount_pwr_on" style="top:136px; left:300px; background-color:#00FF00; color:black" onClick="doSend('/mountpwr?on')";>ON</div>
+            <div class="button_normal" id="roof_pwr_off" style="top:136px; left:365px; background-color:#FF0800; color:yellow" onClick="doSend('/mountpwr?off')";>OFF</div>
 
             <div class="button_start_stop" id="start_stop" style="top:195px; left:265px;" onClick="doSend('/startstop')";>START STOP</div>
             <div class="button_emergency_stop" id="emergency_stop" style="top:280px; left:260px" onClick="doSend('/STOP')";>EMERGENCY STOP</div>
