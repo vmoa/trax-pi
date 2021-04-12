@@ -41,9 +41,11 @@ class Sensor:
 
     # Default callbacks; override at instance creation or by setting <var>.device.when_[de]activated
     def activated(self):
+        browser.browser.updateBrowser()
         logging.info(printStatus())
 
     def deactivated(self):
+        browser.browser.updateBrowser()
         logging.info(printStatus())
 
 
@@ -64,10 +66,14 @@ class Control:
         Control.names.append(name)
 
     def turnOn(self):
-        return(self.device.on())
+        self.device.on()
+        browser.browser.updateBrowser()
+        logging.info(printStatus())
 
     def turnOff(self):
-        return(self.device.off())
+        self.device.off()
+        browser.browser.updateBrowser()
+        logging.info(printStatus())
 
     def is_active(self):
         return(self.device.value == 1)
@@ -87,6 +93,7 @@ class Control:
             self.turnOff();
         else:
             logging.error("WTF? toggle() called with step %".format(step))
+
 
 def printStatus():
     status = ''
