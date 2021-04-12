@@ -2,26 +2,31 @@
 #
 # Callbacks are registered in trax.py because it just makes flask cleaner
 
+import flask
 import logging
+import re
 import threading
 
 import device
-import flask
 import sse
 
 
 class Browser:
 
-    def sendNotice(self, msg):
-        """Update the notice area on the browser"""
-        sse.sse.send(id='notice', type='innerHTML', data=msg)
+    emergencyOverride = 0
+
+    def sendNotice(self, msg, log=''):
+        """Update the notice area on the browser and optionally log the message"""
+        if (log == 'ERROR'):
+            logging.error(msg)
+        elif (log == 'INFO'):
+            logging.info(msg)
+        sse.sse.send(id='notice', type='innerHTML', data=re.sub(r': +', ':<br/>', msg))
 
     def sendTicker(self, msg):
         """Update the ticker on the browser"""
         sse.sse.send(id='ticker', type='innerHTML', data=msg)
 
-
-    # TODO: make this a callback for any sensor change
     # TODO: (maybe) optimize to only send updates for changes?
     def updateBrowser(self):
         """Decorate the indicators on the web browser"""
@@ -54,48 +59,147 @@ class Browser:
 
 
     def initialConnect(self):
-        """Send intial connect message to browser"""
+        """Send intial connect message to browser and make sure indicators are colored"""
         self.sendNotice("Connected!<br/>Welcome to T-Rax!")
         self.updateBrowser()
+
 
     def startStop(self, app):
         """Process START/STOP button"""
         logging.info("Click: START/STOP from {}".format(flask.request.remote_addr))
-        # TODO: put safety logic here!
-        device.Control.by_name['fob'].toggle()
-        return "Toggle"
+
+        if (self.emergencyOverride):
+            self.sendNotice("EMERGENCY OVERRIDE: Toggling fob", log='INFO')
+            device.Control.by_name['fob'].toggle()
+            return "OK"
+
+        # Open logic -- roof is closed
+        if (device.Sensor.by_name['close'].isOn()):
+            if (device.Sensor.by_name['bldg'].isOn()):
+                if (device.Sensor.by_name['roofin'].isOn()):
+                    if (device.Sensor.by_name['park'].isOn()):
+                        if (device.Sensor.by_name['mntin'].isOff()):
+                            if (device.Sensor.by_name['wx'].isOn()):
+                                self.sendNotice("Toggling fob (opening roof)", log='INFO')
+                                device.Control.by_name['fob'].toggle()
+                                return "OK"
+                            else:
+                                self.sendNotice("Cannot open roof: Weather not OK", log='ERROR')
+                                return "ERROR"
+                        else:
+                            self.sendNotice("Cannot open roof: Mount power is on", log='ERROR')
+                            return "ERROR"
+                    else:
+                        self.sendNotice("Cannot open roof: Mount must be parked first", log='ERROR')
+                        return "ERROR"
+                else:
+                    self.sendNotice("Cannot open roof: roof power is not on", log='ERROR')
+                    return "ERROR"
+            else:
+                self.sendNotice("Cannot open roof: building power has failed", log='ERROR')
+                return "ERROR"
+
+        # Close logic -- roof is open
+        elif (device.Sensor.by_name['open'].isOn()):
+            if (device.Sensor.by_name['roofin'].isOn()):
+                if (device.Sensor.by_name['park'].isOn()):
+                    if (device.Sensor.by_name['mntin'].isOff()):
+                        self.sendNotice("Toggling fob (closing roof)", log='INFO')
+                        device.Control.by_name['fob'].toggle()
+                        return "OK"
+                    else:
+                        self.sendNotice("Cannot close roof: mount power is on", log='ERROR')
+                        return "ERROR"
+                else:
+                    self.sendNotice("Cannot close roof: mount must be parked first", log='ERROR')
+                    return "ERROR"
+            else:
+                self.sendNotice("Cannot close roof: roof power is not on", log='ERROR')
+                return "ERROR"
+
+        # Midway logic -- neither open nor closed
+        else:
+            self.sendNotice("Toggling fob (roof midway)", log='INFO')
+            device.Control.by_name['fob'].toggle()
+            return "OK"
+
 
     def roofPower(self, app):
         """Process Roof Power ON or OFF button"""
-        # TODO: put safety logic here!
         if ('on' in flask.request.args):
-            logging.info("Click: Roof Power ON from {}".format(flask.request.remote_addr))
-            device.Control.by_name['roofout'].turnOn()
-            return "Roof on OK"
+            action = 'ON'
         elif ('off' in flask.request.args):
-            logging.info("Click: Roof Power OFF from {}".format(flask.request.remote_addr))
-            device.Control.by_name['roofout'].turnOff()
-            return "Roof on OK"
+            action = 'OFF'
         else:
-            logging.error("Click: Mount Power <invalid> from {} [request:{}]".format(
-                flask.request.remote_addr, flask.request))
-            return "Invalid roof request"
+            logging.error("Click: Roof Power UNKNOWN from {}".format(flask.request.remote_addr))
+            return 'ERROR'
+        logging.info("Click: Roof Power {} from {}".format(action, flask.request.remote_addr))
+
+        if (action == 'ON'):
+            if (self.emergencyOverride):
+                self.sendNotice("EMERGENCY OVERRIDE: Turning on roof power", log='INFO')
+                device.Control.by_name['roofout'].turnOn()
+                return "OK"
+            elif (device.Sensor.by_name['roofin'].isOn()):
+                self.sendNotice("Roof is already on!", log='ERROR')
+                return 'ERROR'
+            else:
+                self.sendNotice("Turning on roof power", log='INFO')
+                device.Control.by_name['roofout'].turnOn()
+                return 'OK'
+
+        else:    # action == 'OFF'
+            if (self.emergencyOverride):
+                self.sendNotice("EMERGENCY OVERRIDE: Turning off roof power", log='INFO')
+                device.Control.by_name['roofout'].turnOff()
+                return "OK"
+            elif (device.Sensor.by_name['roofin'].isOff()):
+                self.sendNotice("Roof is already off!", log='ERROR')
+                return 'ERROR'
+            else:
+                self.sendNotice("Turning off roof power", log='INFO')
+                device.Control.by_name['roofout'].turnOff()
+                return 'OK'
 
     def mountPower(self, app):
         """Porcess Mount Power ON or OFF button"""
-        # TODO: put safety logic here!
         if ('on' in flask.request.args):
-            logging.info("Click: Mount Power ON from {}".format(flask.request.remote_addr))
-            device.Control.by_name['mntout'].turnOn()
-            return "Mount on OK"
+            action = 'ON'
         elif ('off' in flask.request.args):
-            logging.info("Click: Mount Power OFF from {}".format(flask.request.remote_addr))
-            device.Control.by_name['mntout'].turnOff()
-            return "Mount off OK"
+            action = 'OFF'
         else:
-            logging.error("Click: Mount Power <invalid> from {} [request:{}]".format(
-                flask.request.remote_addr, flask.request))
-            return "Invalid mount request"
+            logging.error("Click: Mount Power UNKNOWN from {}".format(flask.request.remote_addr))
+            return 'ERROR'
+        logging.info("Click: Mount Power {} from {}".format(action, flask.request.remote_addr))
+
+        if (action == 'ON'):
+            if (self.emergencyOverride):
+                self.sendNotice("EMERGENCY OVERRIDE: Turning on mount power", log='INFO')
+                device.Control.by_name['mntout'].turnOn()
+                return "OK"
+            elif (device.Control.by_name['mntout'].isOn()):
+                self.sendNotice("Mount is already on!", log='ERROR')
+                return 'ERROR'
+            elif (device.Sensor.by_name['open'].isOff()):
+                self.sendNotice("Cannot turn on mount: roof is not open", log='ERROR')
+                return 'ERROR'
+            else:
+                self.sendNotice("Turning on mount power", log='INFO')
+                device.Control.by_name['mntout'].turnOn()
+                return 'OK'
+
+        else:    # action == 'OFF'
+            if (self.emergencyOverride):
+                self.sendNotice("EMERGENCY OVERRIDE: Turning off mount power", log='INFO')
+                device.Control.by_name['mntout'].off()
+                return "OK"
+            elif (device.Sensor.by_name['mntin'].isOff()):
+                self.sendNotice("Mount is already off!", log='ERROR')
+                return 'ERROR'
+            else:
+                self.sendNotice("Turning off mount power", log='INFO')
+                device.Control.by_name['mntout'].turnOff()
+                return 'OK'
 
     def emergencyStop(self, app):
         """Process EMERGENCY STOP button"""
