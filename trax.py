@@ -31,7 +31,7 @@ statusInterval = 60     # Seconds between status updates without input changes
 # Hard coded GPIO setup
 class TraxGpio:
     def __init__(self):
-        self.wx = device.Sensor(pin=0, name='wx')           # weatherOk 
+        self.wx = device.Sensor(pin=4, name='wx')           # weatherOk 
         self.bldg = device.Sensor(pin=17, name='bldg')      # bldgPowerIn 
         self.mntin = device.Sensor(pin=22, name='mntin')    # mountPowerIn 
         self.roofin = device.Sensor(pin=27, name='roofin')  # roofPowerIn 
