@@ -9,7 +9,6 @@
 
 import argparse
 import datetime
-from gpiozero import DigitalInputDevice, DigitalOutputDevice
 import logging
 import os
 import signal
@@ -28,27 +27,9 @@ app = flask.Flask(__name__)
 version = 'v0.9'        # T-Rax version
 statusInterval = 60     # Seconds between status updates without input changes
 
-# Hard coded GPIO setup
-class TraxGpio:
-    def __init__(self, simulator=0):
-        self.wx = device.Sensor(pin=4, name='wx')           # weatherOk 
-        self.bldg = device.Sensor(pin=17, name='bldg')      # bldgPowerIn 
-        self.mntin = device.Sensor(pin=22, name='mntin')    # mountPowerIn 
-        self.roofin = device.Sensor(pin=27, name='roofin')  # roofPowerIn 
-        self.park = device.Sensor(pin=25, name='park')      # mountParked 
-        self.open = device.Sensor(pin=23, name='open')      # roofOpen 
-        self.close = device.Sensor(pin=24, name='close')    # roofClosed 
-        device.Sensor.simulator = simulator
-
-        self.heart = device.Control(pin=13, name='heart')                       # heartLed 
-        self.mntout = device.Control(pin=6, name='mntout', active_high=False)   # mountPowerOut
-        self.roofout = device.Control(pin=5, name='roofout', active_high=False) # roofPowerOut 
-        self.laser = device.Control(pin=16, name='laser')                       # laserPowerOut 
-        self.fob = device.Control(pin=26, name='fob')                           # fobOutput 
-        device.Control.simulator = simulator
-
 
 def initialize():
+    # Parse command line args
     default_logfile = '/var/log/trax.log'
     parser = argparse.ArgumentParser(description='T-Rax roof controller.')
     parser.add_argument('--test-mode', dest='test_mode', action='store_true', help='enter test mode')
@@ -56,6 +37,7 @@ def initialize():
     parser.add_argument('--log-file', '-L', dest='logfile', action='store', help='log filename (default {})'.format(default_logfile))
     args = parser.parse_args()
 
+    # Set up logging
     # TODO consider using flask logging interface https://flask.palletsprojects.com/en/1.1.x/logging/
     loggingConfig = dict(
         format = "%(asctime)s [%(levelname)s] %(message)s",
@@ -70,14 +52,15 @@ def initialize():
     if (args.simulator):
         logging.info("Adjusting timings for simulator")
 
-    global gpio
-    gpio = TraxGpio(args.simulator)
-
+    # Initialize devices
+    gpio = device.Gpio(args.simulator)
     logging.info(device.printStatus())
 
+    # Enter test mode if requested
     if (args.test_mode):
         # TODO: pass in gpio instead of using xxx.by_name
         test = test_mode.TestMode()
+        exit  # Test mode should not return, but just in case
 
 
 #

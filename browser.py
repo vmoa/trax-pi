@@ -30,29 +30,29 @@ class Browser:
     # TODO: (maybe) optimize to only send updates for changes?
     def updateBrowser(self):
         """Decorate the indicators on the web browser"""
-        if (device.Sensor.by_name['close'].isOn()):
+        if (device.Gpio.close.isOn()):
             sse.sse.send(type='indicator', id='roof_position', status='closed')
-        elif (device.Sensor.by_name['open'].isOn()):
+        elif (device.Gpio.open.isOn()):
             sse.sse.send(type='indicator', id='roof_position', status='open')
         else:
             sse.sse.send(type='indicator', id='roof_position', status='midway')
 
-        if (device.Sensor.by_name['park'].isOn()):
+        if (device.Gpio.park.isOn()):
             sse.sse.send(type='indicator', id='mount_position', status='parked')
         else:
             sse.sse.send(type='indicator', id='mount_position', status='notparked')
 
-        if (device.Sensor.by_name['bldg'].isOn()):
+        if (device.Gpio.bldg.isOn()):
             sse.sse.send(type='indicator', id='building_pwr', status='on')
         else:
             sse.sse.send(type='indicator', id='building_pwr', status='off')
 
-        if (device.Sensor.by_name['roofin'].isOn()):
+        if (device.Gpio.roofin.isOn()):
             sse.sse.send(type='indicator', id='roof_pwr', status='on')
         else:
             sse.sse.send(type='indicator', id='roof_pwr', status='off')
 
-        if (device.Sensor.by_name['mntin'].isOn()):
+        if (device.Gpio.mntin.isOn()):
             sse.sse.send(type='indicator', id='mount_pwr', status='on')
         else:
             sse.sse.send(type='indicator', id='mount_pwr', status='off')
@@ -70,18 +70,18 @@ class Browser:
 
         if (self.emergencyOverride):
             self.sendNotice("EMERGENCY OVERRIDE: Toggling fob", log='INFO')
-            device.Control.by_name['fob'].toggle()
+            device.Gpio.fob.toggle()
             return "OK"
 
         # Open logic -- roof is closed
-        if (device.Sensor.by_name['close'].isOn()):
-            if (device.Sensor.by_name['bldg'].isOn()):
-                if (device.Sensor.by_name['roofin'].isOn()):
-                    if (device.Sensor.by_name['park'].isOn()):
-                        if (device.Sensor.by_name['mntin'].isOff()):
-                            if (device.Sensor.by_name['wx'].isOn()):
+        if (device.Gpio.close.isOn()):
+            if (device.Gpio.bldg.isOn()):
+                if (device.Gpio.roofin.isOn()):
+                    if (device.Gpio.park.isOn()):
+                        if (device.Gpio.mntin.isOff()):
+                            if (device.Gpio.wx.isOn()):
                                 self.sendNotice("Toggling fob (opening roof)", log='INFO')
-                                device.Control.by_name['fob'].toggle()
+                                device.Gpio.fob.toggle()
                                 return "OK"
                             else:
                                 self.sendNotice("Cannot open roof: Weather not OK", log='ERROR')
@@ -100,12 +100,12 @@ class Browser:
                 return "ERROR"
 
         # Close logic -- roof is open
-        elif (device.Sensor.by_name['open'].isOn()):
-            if (device.Sensor.by_name['roofin'].isOn()):
-                if (device.Sensor.by_name['park'].isOn()):
-                    if (device.Sensor.by_name['mntin'].isOff()):
+        elif (device.Gpio.open.isOn()):
+            if (device.Gpio.roofin.isOn()):
+                if (device.Gpio.park.isOn()):
+                    if (device.Gpio.mntin.isOff()):
                         self.sendNotice("Toggling fob (closing roof)", log='INFO')
-                        device.Control.by_name['fob'].toggle()
+                        device.Gpio.fob.toggle()
                         return "OK"
                     else:
                         self.sendNotice("Cannot close roof: mount power is on", log='ERROR')
@@ -120,7 +120,7 @@ class Browser:
         # Midway logic -- neither open nor closed
         else:
             self.sendNotice("Toggling fob (roof midway)", log='INFO')
-            device.Control.by_name['fob'].toggle()
+            device.Gpio.fob.toggle()
             return "OK"
 
 
@@ -138,27 +138,27 @@ class Browser:
         if (action == 'ON'):
             if (self.emergencyOverride):
                 self.sendNotice("EMERGENCY OVERRIDE: Turning on roof power", log='INFO')
-                device.Control.by_name['roofout'].turnOn()
+                device.Gpio.roofout.turnOn()
                 return "OK"
-            elif (device.Sensor.by_name['roofin'].isOn()):
+            elif (device.Gpio.roofin.isOn()):
                 self.sendNotice("Roof is already on!", log='ERROR')
                 return 'ERROR'
             else:
                 self.sendNotice("Turning on roof power", log='INFO')
-                device.Control.by_name['roofout'].turnOn()
+                device.Gpio.roofout.turnOn()
                 return 'OK'
 
         else:    # action == 'OFF'
             if (self.emergencyOverride):
                 self.sendNotice("EMERGENCY OVERRIDE: Turning off roof power", log='INFO')
-                device.Control.by_name['roofout'].turnOff()
+                device.Gpio.roofout.turnOff()
                 return "OK"
-            elif (device.Sensor.by_name['roofin'].isOff()):
+            elif (device.Gpio.roofin.isOff()):
                 self.sendNotice("Roof is already off!", log='ERROR')
                 return 'ERROR'
             else:
                 self.sendNotice("Turning off roof power", log='INFO')
-                device.Control.by_name['roofout'].turnOff()
+                device.Gpio.roofout.turnOff()
                 return 'OK'
 
     def mountPower(self, app):
@@ -175,36 +175,36 @@ class Browser:
         if (action == 'ON'):
             if (self.emergencyOverride):
                 self.sendNotice("EMERGENCY OVERRIDE: Turning on mount power", log='INFO')
-                device.Control.by_name['mntout'].turnOn()
+                device.Gpio.mntout.turnOn()
                 return "OK"
-            elif (device.Control.by_name['mntout'].isOn()):
+            elif (device.Gpio.mntout.isOn()):
                 self.sendNotice("Mount is already on!", log='ERROR')
                 return 'ERROR'
-            elif (device.Sensor.by_name['open'].isOff()):
+            elif (device.Gpio.open.isOff()):
                 self.sendNotice("Cannot turn on mount: roof is not open", log='ERROR')
                 return 'ERROR'
             else:
                 self.sendNotice("Turning on mount power", log='INFO')
-                device.Control.by_name['mntout'].turnOn()
+                device.Gpio.mntout.turnOn()
                 return 'OK'
 
         else:    # action == 'OFF'
             if (self.emergencyOverride):
                 self.sendNotice("EMERGENCY OVERRIDE: Turning off mount power", log='INFO')
-                device.Control.by_name['mntout'].off()
+                device.Gpio.mntout.off()
                 return "OK"
-            elif (device.Sensor.by_name['mntin'].isOff()):
+            elif (device.Gpio.mntin.isOff()):
                 self.sendNotice("Mount is already off!", log='ERROR')
                 return 'ERROR'
             else:
                 self.sendNotice("Turning off mount power", log='INFO')
-                device.Control.by_name['mntout'].turnOff()
+                device.Gpio.mntout.turnOff()
                 return 'OK'
 
     def emergencyStop(self, app):
         """Process EMERGENCY STOP button"""
         logging.info("User pressed EMERGENCY STOP from {}".format(flask.request.remote_addr))
-        device.Control.by_name['roofout'].turnOff()
+        device.Gpio.roofout.turnOff()
         self.sendNotice("EMERGENCY STOP!<br/>Turning off roof power")
         return "Emergency Stop OK"
 
