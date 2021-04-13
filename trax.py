@@ -30,7 +30,7 @@ statusInterval = 60     # Seconds between status updates without input changes
 
 # Hard coded GPIO setup
 class TraxGpio:
-    def __init__(self):
+    def __init__(self, simulator=0):
         self.wx = device.Sensor(pin=4, name='wx')           # weatherOk 
         self.bldg = device.Sensor(pin=17, name='bldg')      # bldgPowerIn 
         self.mntin = device.Sensor(pin=22, name='mntin')    # mountPowerIn 
@@ -38,21 +38,25 @@ class TraxGpio:
         self.park = device.Sensor(pin=25, name='park')      # mountParked 
         self.open = device.Sensor(pin=23, name='open')      # roofOpen 
         self.close = device.Sensor(pin=24, name='close')    # roofClosed 
+        device.Sensor.simulator = simulator
 
         self.heart = device.Control(pin=13, name='heart')                       # heartLed 
         self.mntout = device.Control(pin=6, name='mntout', active_high=False)   # mountPowerOut
         self.roofout = device.Control(pin=5, name='roofout', active_high=False) # roofPowerOut 
         self.laser = device.Control(pin=16, name='laser')                       # laserPowerOut 
         self.fob = device.Control(pin=26, name='fob')                           # fobOutput 
+        device.Control.simulator = simulator
 
 
 def initialize():
     default_logfile = '/var/log/trax.log'
     parser = argparse.ArgumentParser(description='T-Rax roof controller.')
     parser.add_argument('--test-mode', dest='test_mode', action='store_true', help='enter test mode')
+    parser.add_argument('--simulator', dest='simulator', action='store_true', help='adjust timings for T-Rax simulator')
     parser.add_argument('--log-file', '-L', dest='logfile', action='store', help='log filename (default {})'.format(default_logfile))
     args = parser.parse_args()
 
+    # TODO consider using flask logging interface https://flask.palletsprojects.com/en/1.1.x/logging/
     loggingConfig = dict(
         format = "%(asctime)s [%(levelname)s] %(message)s",
         datefmt = "%Y-%m-%d %H:%M:%S",
@@ -63,10 +67,11 @@ def initialize():
         loggingConfig['filename'] = args.logfile if args.logfile else default_logfile;
     logging.basicConfig(**loggingConfig)
     logging.info("Initializing T-Rax for the Raspberry Pi {}".format(version))
-    # TODO consider using flask logging interface https://flask.palletsprojects.com/en/1.1.x/logging/
+    if (args.simulator):
+        logging.info("Adjusting timings for simulator")
 
     global gpio
-    gpio = TraxGpio()
+    gpio = TraxGpio(args.simulator)
 
     logging.info(device.printStatus())
 
