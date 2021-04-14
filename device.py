@@ -12,10 +12,12 @@ import browser
 import util
 
 statusInterval = 60     # Seconds between status updates without input changes
+parkSensorDelay = 5     # Seconds to wait for park sensor after turing on laser
 
 class Gpio:
 
     def __init__(self, simulator=0):
+        """Connect all our devices"""
         Gpio.wx = self.Sensor(pin=4, name='wx')           # weatherOk
         Gpio.bldg = self.Sensor(pin=17, name='bldg')      # bldgPowerIn
         Gpio.mntin = self.Sensor(pin=22, name='mntin')    # mountPowerIn
@@ -30,7 +32,10 @@ class Gpio:
         Gpio.laser = self.Control(pin=16, name='laser')                       # laserPowerOut
         Gpio.fob = self.Control(pin=26, name='fob')                           # fobOutput
 
+        # Increase timings so a human can respond if we're using the simulator
         Gpio.simulator = simulator
+        if (simulator):
+            parkSensorDelay = 15
 
 
     class Sensor:
@@ -59,6 +64,18 @@ class Gpio:
 
         def isOff(self):
             return(self.device.value == 0)
+
+        def isParked(self):
+            """Turn on laser and give park sensor time to activate"""
+            Gpio.laser.device.on()
+            countdown = parkSensorDelay
+            logging.info("Laser activated; waiting up to {} seconds for park sensor".format(countdown))
+            while (self.isOff() and countdown > 0):
+                sleep(0.1)  # Does not block other threads, yay!
+                countdown = countdown - 0.1
+            Gpio.laser.device.off()
+            logging.info("Laser active for {:0.1f} seconds".format(parkSensorDelay - countdown))
+            return(self.device.value == 1)
 
         # Default callbacks; override at instance creation or by setting <var>.device.when_[de]activated
         def activated(self):

@@ -77,7 +77,7 @@ class Browser:
         if (device.Gpio.close.isOn()):
             if (device.Gpio.bldg.isOn()):
                 if (device.Gpio.roofin.isOn()):
-                    if (device.Gpio.park.isOn()):
+                    if (device.Gpio.park.isParked()):
                         if (device.Gpio.mntin.isOff()):
                             if (device.Gpio.wx.isOn()):
                                 self.sendNotice("Toggling fob (opening roof)", log='INFO')
@@ -102,7 +102,7 @@ class Browser:
         # Close logic -- roof is open
         elif (device.Gpio.open.isOn()):
             if (device.Gpio.roofin.isOn()):
-                if (device.Gpio.park.isOn()):
+                if (device.Gpio.park.isParked()):
                     if (device.Gpio.mntin.isOff()):
                         self.sendNotice("Toggling fob (closing roof)", log='INFO')
                         device.Gpio.fob.toggle()
