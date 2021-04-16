@@ -162,10 +162,12 @@
 
         <script type="text/javascript">
 
-            var black  = 'black';
-            var yellow = 'yellow';
-            var green  = '#00FF00';
-            var red    = '#FF0800';
+            var black        = 'black';
+            var yellow       = 'yellow';
+            var green        = '#08FF08';
+            var light_green  = '#C0FFC0';
+            var red          = '#FF0808';
+            var light_red    = '#FF8000';
 
             // event:innerHTML { id: 'notice', data: 'msg' }
             function set_innerHTML(e) {
@@ -205,6 +207,7 @@
                     element.style.backgroundColor = red;
                     element.style.color = yellow;
                     element.innerHTML = 'CLOSED';
+
                 } else if (o.id == "mount_position" && o.status == 'parked') {
                     element.style.backgroundColor = green;
                     element.style.color = black;
@@ -213,6 +216,19 @@
                     element.style.backgroundColor = red;
                     element.style.color = yellow;
                     element.innerHTML = 'NOT PARKED';
+                } else if (o.id == "mount_position" && o.status == 'parked_probably') {
+                    element.style.backgroundColor = light_green;
+                    element.style.color = black;
+                    element.innerHTML = 'PARKED';
+                } else if (o.id == "mount_position" && o.status == 'notparked_probably') {
+                    element.style.backgroundColor = light_red;
+                    element.style.color = yellow;
+                    element.innerHTML = 'NOT PARKED';
+                } else if (o.id == "mount_position") {
+                    element.style.backgroundColor = yellow;
+                    element.style.color = black;
+                    element.innerHTML = 'UNKNOWN';
+
                 } else if (o.status == 'on') {
                     element.style.backgroundColor = green;
                     element.style.color = black;
@@ -265,7 +281,7 @@
             <div class="indicator_wide" id="roof_position" style="top:46px; left:60px">UNKNOWN</div>
 
             <div class="tag_centered" style="top:100px; left:50px">MOUNT POSITION</div>
-            <div class="indicator_wide" id="mount_position" style="top:116px; left:60px">UNKNOWN</div>
+            <div class="indicator_wide" id="mount_position" style="top:116px; left:60px; cursor:pointer;" onClick="doSend('/checkmnt')">UNKNOWN</div>
 
             <div class="tag_centered" style="top:170px; left:50px">POWER STATUS</div>
             <div class="tag_right" style="top:198px; left:0px">BUILDING PWR</div>

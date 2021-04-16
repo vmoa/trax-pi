@@ -5,19 +5,19 @@
 import datetime
 from gpiozero import DigitalInputDevice, DigitalOutputDevice
 import logging
-from time import sleep
 import threading
+import time
 
 import browser
 import util
 
 statusInterval = 60     # Seconds between status updates without input changes
-parkSensorDelay = 5     # Seconds to wait for park sensor after turing on laser
 
 class Gpio:
 
     def __init__(self, simulator=0):
-        """Connect all our devices"""
+        """Connect all our devices. Set `simulator` to increase timings so a human can respond."""
+        Gpio.simulator = simulator  
         Gpio.wx = self.Sensor(pin=4, name='wx')           # weatherOk
         Gpio.bldg = self.Sensor(pin=17, name='bldg')      # bldgPowerIn
         Gpio.mntin = self.Sensor(pin=22, name='mntin')    # mountPowerIn
@@ -31,11 +31,6 @@ class Gpio:
         Gpio.roofout = self.Control(pin=5, name='roofout', active_high=False) # roofPowerOut
         Gpio.laser = self.Control(pin=16, name='laser')                       # laserPowerOut
         Gpio.fob = self.Control(pin=26, name='fob')                           # fobOutput
-
-        # Increase timings so a human can respond if we're using the simulator
-        Gpio.simulator = simulator
-        if (simulator):
-            parkSensorDelay = 15
 
 
     class Sensor:
@@ -56,6 +51,22 @@ class Gpio:
             Gpio.Sensor.by_pin[pin] = self
             Gpio.Sensor.names.append(name)
 
+            # Park sensor magic
+            if (name == 'park'):
+                self.parkLastCheck = 0      # Time of last actual laser-on check of park state
+                self.parkSensorDelay = 5         # Seconds to wait for park sensor after turing on laser
+                self.park_report_last_state = 10 # Seconds to believe last park state
+                self.park_report_unknown = 60    # Seconds after which we admit we've been guessing at park state
+                # Valid park states TODO: make this an enum?
+                self.PARKED_PROBABLY   =  2
+                self.PARKED            =  1
+                self.PARK_UNKNOWN      =  0
+                self.UNPARKED          = -1
+                self.UNPARKED_PROBABLY = -2
+                if (Gpio.simulator):
+                    self.parkSensorDelay = 15
+
+
         def is_active(self):
             return(self.device.is_active)
 
@@ -65,17 +76,32 @@ class Gpio:
         def isOff(self):
             return(self.device.value == 0)
 
-        def isParked(self):
-            """Turn on laser and give park sensor time to activate"""
-            Gpio.laser.device.on()
-            countdown = parkSensorDelay
-            logging.info("Laser activated; waiting up to {} seconds for park sensor".format(countdown))
-            while (self.isOff() and countdown > 0):
-                sleep(0.1)  # Does not block other threads, yay!
-                countdown = countdown - 0.1
-            Gpio.laser.device.off()
-            logging.info("Laser active for {:0.1f} seconds".format(parkSensorDelay - countdown))
-            return(self.device.value == 1)
+        def isParked(self, check=0):
+            """Return (last?) parked state. If `check` then turn on laser and give park sensor time to activate."""
+            if (check):
+                Gpio.laser.device.on()
+                countdown = self.parkSensorDelay
+                logging.info("Laser activated; waiting up to {} seconds for park sensor".format(countdown))
+                while (self.isOff() and countdown > 0):
+                    time.sleep(0.1)  # Does not block other threads, yay!
+                    countdown = countdown - 0.1
+                Gpio.laser.device.off()
+                logging.info("Laser active for {:0.1f} seconds".format(self.parkSensorDelay - countdown))
+                self.parkLastState = self.PARKED if (self.device.value == 1) else self.UNPARKED
+                self.parkLastCheck = int(time.time())
+                return(self.parkLastState);
+
+            # If not check, use age to determine probability we're correct
+            age = int(time.time()) - self.parkLastCheck
+            if (age < self.park_report_last_state):
+                return(self.parkLastState)
+            elif (age > self.park_report_unknown):
+                return(self.PARK_UNKNOWN)
+            else:
+                if (self.parkLastState == self.PARKED):
+                    return(self.PARKED_PROBABLY)
+                else:
+                    return(self.UNPARKED_PROBABLY)
 
         # Default callbacks; override at instance creation or by setting <var>.device.when_[de]activated
         def activated(self):

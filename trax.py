@@ -34,6 +34,7 @@ def initialize():
     parser = argparse.ArgumentParser(description='T-Rax roof controller.')
     parser.add_argument('--test-mode', dest='test_mode', action='store_true', help='enter test mode')
     parser.add_argument('--simulator', dest='simulator', action='store_true', help='adjust timings for T-Rax simulator')
+    parser.add_argument('--debug', dest='debug', action='store_true', help='include DEBUG messages in logs')
     parser.add_argument('--log-file', '-L', dest='logfile', action='store', help='log filename (default {})'.format(default_logfile))
     args = parser.parse_args()
 
@@ -42,7 +43,7 @@ def initialize():
     loggingConfig = dict(
         format = "%(asctime)s [%(levelname)s] %(message)s",
         datefmt = "%Y-%m-%d %H:%M:%S",
-        level = logging.INFO)
+        level = logging.DEBUG if (args.debug) else logging.INFO)
     if (sys.stdin.isatty() and not args.logfile):
         print("TTY detected; logging to stderr")
     else:
@@ -84,19 +85,20 @@ def startStop():
     return browser.browser.startStop(app)
 
 @app.route('/roofpwr', methods=['GET'])
-def roofPwrOff():
+def roofPwrOnOff():
     return browser.browser.roofPower(app)
-    return('OK')
 
 @app.route('/mountpwr', methods=['GET'])
-def mountPwrOn():
+def mountPwrOnOff():
     return browser.browser.mountPower(app)
-    return('OK')
+
+@app.route('/checkmnt', methods=['GET'])
+def checkMount():
+    return browser.browser.checkMount(app)
 
 @app.route('/STOP', methods=['GET'])
 def emergencyStop():
     return browser.browser.emergencyStop(app)
-    return('OK')
 
 
 if __name__ == '__main__':

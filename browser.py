@@ -37,10 +37,17 @@ class Browser:
         else:
             sse.sse.send(type='indicator', id='roof_position', status='midway')
 
-        if (device.Gpio.park.isOn()):
+        parkState = device.Gpio.park.isParked()
+        if (parkState == device.Gpio.park.PARKED_PROBABLY):
+            sse.sse.send(type='indicator', id='mount_position', status='parked_probably')
+        elif (parkState == device.Gpio.park.PARKED): 
             sse.sse.send(type='indicator', id='mount_position', status='parked')
-        else:
+        elif (parkState == device.Gpio.park.UNPARKED): 
             sse.sse.send(type='indicator', id='mount_position', status='notparked')
+        elif (parkState == device.Gpio.park.UNPARKED_PROBABLY): 
+            sse.sse.send(type='indicator', id='mount_position', status='notparked_probably')
+        else:
+            sse.sse.send(type='indicator', id='mount_position', status='unknown')
 
         if (device.Gpio.bldg.isOn()):
             sse.sse.send(type='indicator', id='building_pwr', status='on')
@@ -102,7 +109,7 @@ class Browser:
         # Close logic -- roof is open
         elif (device.Gpio.open.isOn()):
             if (device.Gpio.roofin.isOn()):
-                if (device.Gpio.park.isParked()):
+                if (device.Gpio.park.isParked(check=1) == device.Gpio.park.PARKED):
                     if (device.Gpio.mntin.isOff()):
                         self.sendNotice("Toggling fob (closing roof)", log='INFO')
                         device.Gpio.fob.toggle()
@@ -201,9 +208,15 @@ class Browser:
                 device.Gpio.mntout.turnOff()
                 return 'OK'
 
+    def checkMount(self, app):
+        """Actively check the mount power status"""
+        logging.info("Click: Check Mount from {}".format(flask.request.remote_addr))
+        device.Gpio.park.isParked(check=1)
+        return 'OK'
+
     def emergencyStop(self, app):
         """Process EMERGENCY STOP button"""
-        logging.info("User pressed EMERGENCY STOP from {}".format(flask.request.remote_addr))
+        logging.info("Click: EMERGENCY STOP from {}".format(flask.request.remote_addr))
         device.Gpio.roofout.turnOff()
         self.sendNotice("EMERGENCY STOP!<br/>Turning off roof power")
         return "Emergency Stop OK"
