@@ -2,6 +2,7 @@
 # Class Sensor to extend DigitalInputDevice for T-Rax
 #
 
+import enum
 import datetime
 from gpiozero import DigitalInputDevice, DigitalOutputDevice
 import logging
@@ -12,6 +13,15 @@ import browser
 import util
 
 statusInterval = 60     # Seconds between status updates without input changes
+
+# Define an enum with possible park states
+class park(enum.Enum):
+    PARKED = enum.auto()
+    UNPARKED = enum.auto()
+    PARKED_PROBABLY = enum.auto()
+    UNPARKED_PROBABLY = enum.auto()
+    UNKNOWN = enum.auto()
+
 
 class Gpio:
 
@@ -53,18 +63,12 @@ class Gpio:
 
             # Park sensor magic
             if (name == 'park'):
-                self.parkLastCheck = 0      # Time of last actual laser-on check of park state
+                self.parkLastCheck = 0           # Time of last actual laser-on check of park state
                 self.parkSensorDelay = 5         # Seconds to wait for park sensor after turing on laser
                 self.park_report_last_state = 10 # Seconds to believe last park state
                 self.park_report_unknown = 60    # Seconds after which we admit we've been guessing at park state
-                # Valid park states TODO: make this an enum?
-                self.PARKED_PROBABLY   =  2
-                self.PARKED            =  1
-                self.PARK_UNKNOWN      =  0
-                self.UNPARKED          = -1
-                self.UNPARKED_PROBABLY = -2
                 if (Gpio.simulator):
-                    self.parkSensorDelay = 15
+                    self.parkSensorDelay = 15    # Give human more time to simulate park
 
 
         def is_active(self):
@@ -76,32 +80,34 @@ class Gpio:
         def isOff(self):
             return(self.device.value == 0)
 
-        def isParked(self, check=0):
-            """Return (last?) parked state. If `check` then turn on laser and give park sensor time to activate."""
-            if (check):
-                Gpio.laser.device.on()
-                countdown = self.parkSensorDelay
-                logging.info("Laser activated; waiting up to {} seconds for park sensor".format(countdown))
-                while (self.isOff() and countdown > 0):
-                    time.sleep(0.1)  # Does not block other threads, yay!
-                    countdown = countdown - 0.1
-                Gpio.laser.device.off()
-                logging.info("Laser active for {:0.1f} seconds".format(self.parkSensorDelay - countdown))
-                self.parkLastState = self.PARKED if (self.device.value == 1) else self.UNPARKED
-                self.parkLastCheck = int(time.time())
-                return(self.parkLastState);
+        def checkParked(self):
+            """Check and report park status. Turn on laser and give park sensor time to activate."""
+            Gpio.laser.device.on()
+            countdown = self.parkSensorDelay
+            logging.info("Laser activated; waiting up to {} seconds for park sensor".format(countdown))
+            while (self.isOff() and countdown > 0):
+                time.sleep(0.1)  # Does not block other threads, yay!
+                countdown = countdown - 0.1
+            Gpio.laser.device.off()
+            logging.info("Laser active for {:0.1f} seconds".format(self.parkSensorDelay - countdown))
+            self.parkLastState = park.PARKED if (self.device.value == 1) else park.UNPARKED
+            self.parkLastCheck = int(time.time())  # Track time of check so user can "see" how fresh it is
+            browser.browser.updateBrowser()
+            logging.info(printStatus())
+            return(self.parkLastState);
 
-            # If not check, use age to determine probability we're correct
+        def isParked(self):
+            """Report on park status, modified by length of time since last check."""
             age = int(time.time()) - self.parkLastCheck
             if (age < self.park_report_last_state):
-                return(self.parkLastState)
+                return(self.parkLastState)  # We still "believe"
             elif (age > self.park_report_unknown):
-                return(self.PARK_UNKNOWN)
+                return(park.UNKNOWN)  # Just too long to wager a guess
             else:
-                if (self.parkLastState == self.PARKED):
-                    return(self.PARKED_PROBABLY)
+                if (self.parkLastState == park.PARKED):
+                    return(park.PARKED_PROBABLY)
                 else:
-                    return(self.UNPARKED_PROBABLY)
+                    return(park.UNPARKED_PROBABLY)
 
         # Default callbacks; override at instance creation or by setting <var>.device.when_[de]activated
         def activated(self):

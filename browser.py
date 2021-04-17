@@ -38,13 +38,13 @@ class Browser:
             sse.sse.send(type='indicator', id='roof_position', status='midway')
 
         parkState = device.Gpio.park.isParked()
-        if (parkState == device.Gpio.park.PARKED_PROBABLY):
+        if (parkState == device.park.PARKED_PROBABLY):
             sse.sse.send(type='indicator', id='mount_position', status='parked_probably')
-        elif (parkState == device.Gpio.park.PARKED): 
+        elif (parkState == device.park.PARKED):
             sse.sse.send(type='indicator', id='mount_position', status='parked')
-        elif (parkState == device.Gpio.park.UNPARKED): 
+        elif (parkState == device.park.UNPARKED):
             sse.sse.send(type='indicator', id='mount_position', status='notparked')
-        elif (parkState == device.Gpio.park.UNPARKED_PROBABLY): 
+        elif (parkState == device.park.UNPARKED_PROBABLY):
             sse.sse.send(type='indicator', id='mount_position', status='notparked_probably')
         else:
             sse.sse.send(type='indicator', id='mount_position', status='unknown')
@@ -84,7 +84,7 @@ class Browser:
         if (device.Gpio.close.isOn()):
             if (device.Gpio.bldg.isOn()):
                 if (device.Gpio.roofin.isOn()):
-                    if (device.Gpio.park.isParked()):
+                    if (device.Gpio.park.checkParked()):
                         if (device.Gpio.mntin.isOff()):
                             if (device.Gpio.wx.isOn()):
                                 self.sendNotice("Toggling fob (opening roof)", log='INFO')
@@ -109,7 +109,7 @@ class Browser:
         # Close logic -- roof is open
         elif (device.Gpio.open.isOn()):
             if (device.Gpio.roofin.isOn()):
-                if (device.Gpio.park.isParked(check=1) == device.Gpio.park.PARKED):
+                if (device.Gpio.park.checkParked() == device.park.PARKED):
                     if (device.Gpio.mntin.isOff()):
                         self.sendNotice("Toggling fob (closing roof)", log='INFO')
                         device.Gpio.fob.toggle()
@@ -211,7 +211,7 @@ class Browser:
     def checkMount(self, app):
         """Actively check the mount power status"""
         logging.info("Click: Check Mount from {}".format(flask.request.remote_addr))
-        device.Gpio.park.isParked(check=1)
+        device.Gpio.park.checkParked()
         return 'OK'
 
     def emergencyStop(self, app):
