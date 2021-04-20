@@ -1,0 +1,31 @@
+<html>
+<head>
+<title>Welcome to T-Rax</title>
+<style>
+    html, body {
+	width: 431px;
+	height: 365px;
+	margin: 20;
+	padding: 0;
+	background-color: green;
+	color: #CCC;
+    }
+</style>
+<script>
+    function launch_trax() {
+	window.open('http://trax:5000/', 'TRAXtarget', 'toolbar=no,scrollbars=no,resizable=no,width=431px,height=365px');
+	return false;
+    }
+</script>
+</head>
+<body>
+<center>
+<h1 style="color:yellow;">Welcome to T-Rax</h1>
+<h3>Click below to launch:<br/>
+<a href="http://trax:5000/" onclick="return launch_trax();">
+<img width="200" src="trex-clipart.png" alt="Lauch T-Rax">
+</a>
+</h3>
+<p><em>(rawr!)</em></p>
+</center>
+</body>
