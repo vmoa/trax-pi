@@ -1,0 +1,157 @@
+/*
+ * CSS for T-Rax
+ */
+
+html, body {
+    width: 431px;
+    height: 365px;
+    margin: 0;
+    padding: 0;
+    background-color: green;
+}
+
+#container {
+    width: inherit;
+    height: inherit;
+    margin: 0;
+    padding: 0;
+    background-color: #60B3B3;
+}
+
+div.tag_centered {
+    position: fixed;
+    width: 120px;
+    height: 28px;
+    text-align: center;
+    color: black;
+    font-size: 13px;
+}
+
+div.tag_right {
+    position: fixed;
+    width: 120px;
+    height: 28px;
+    text-align: right;
+    color: black;
+    font-size: 13px;
+}
+
+div.title_bar {
+    position: fixed;
+    width: 429px;
+    height: 18px;
+    line-height: 18px;
+    border: 0px;
+    padding: 1px;
+    background-color: #B3B3FF;
+    text-align: center;
+    color: #0B00FF;
+    font-size: 16px;
+}
+
+div.indicator_wide {
+    position: fixed;
+    width: 100px;
+    height: 28px;
+    line-height: 28px;
+    border: 1px solid white;
+    border-radius: 5px;
+    padding: 1px;
+    border-color: #B3DADA;
+    background-color: yellow;
+    text-align: center;
+    color: red;
+    font-size: 16px;
+}
+
+div.indicator_narrow {
+    position: fixed;
+    width: 40px;
+    height: 28px;
+    line-height: 28px;
+    border: 1px solid white;
+    border-radius: 5px;
+    padding: 1px;
+    border-color: #B3DADA;
+    background-color: yellow;
+    text-align: center;
+    color: red;
+    font-size: 16px;
+}
+
+/* Text area: 32 wide x 3 tall */
+div.notice_box {
+    position: fixed;
+    width: 188px;
+    height: 40px;
+    line-height: 14px;
+    border: 1px solid white;
+    padding: 3px;
+    border-color: #B3DADA;
+    background-color: yellow;
+    text-align: left;
+    color: #black;
+    font-family: "Lucida Console", "Courier New", monospace;
+    font-size: 14px;
+}
+
+/* Text area: 32 wide x 3 tall */
+div.ticker_box {
+    position: fixed;
+    width: 188px;
+    height: 14px;
+    line-height: 14px;
+    text-align: right;
+    color: #black;
+    font-family: "Lucida Console", "Courier New", monospace;
+    font-size: 14px;
+}
+
+div.button_normal {
+    position: fixed;
+    width: 50px;
+    height: 38px;
+    line-height: 38px;
+    border: 1px solid white;
+    border-radius: 12px;
+    padding: 1px;
+    border-color: #B3DADA;
+    background-color: #FF0800;
+    text-align: center;
+    color: yellow;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+div.button_start_stop {
+    position: fixed;
+    width: 75px;
+    height: 45px;
+    line-height: 24px;
+    border: 1px solid white;
+    border-radius: 12px;
+    padding: 10px;
+    border-color: #B3DADA;
+    background-color: #00FF00;
+    text-align: center;
+    color: #0B00FF;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+div.button_emergency_stop {
+    position: fixed;
+    width: 100px;
+    height: 38px;
+    line-height: 18px;
+    border: 1px solid white;
+    border-radius: 12px;
+    padding: 2px;
+    border-color: #B3DADA;
+    background-color: #FF0800;
+    text-align: center;
+    color: yellow;
+    font-family: sans-serif;
+    font-size: 15px;
+    cursor: pointer;
+}
