@@ -16,7 +16,7 @@
             <div class="indicator_wide" id="roof_position" style="top:46px; left:60px">UNKNOWN</div>
 
             <div class="tag_centered" style="top:100px; left:50px">MOUNT POSITION</div>
-            <div class="indicator_wide" id="mount_position" style="top:116px; left:60px; cursor:pointer;" onClick="doSend('/checkmnt')">UNKNOWN</div>
+            <div class="indicator_button_wide" id="mount_position" style="top:116px; left:60px" onClick="doSend('/checkmnt')">UNKNOWN</div>
 
             <div class="tag_centered" style="top:170px; left:50px">POWER STATUS</div>
             <div class="tag_right" style="top:198px; left:0px">BUILDING PWR</div>
@@ -35,17 +35,17 @@
             </div>
 
             <div class="tag_right" style="top:96px; left:175px; font-size:17px">Roof Power</div>
-            <div class="button_normal" id="roof_pwr_on" style="top:86px; left:300px; background-color:#00FF00; color:black" onClick="doSend('/roofpwr?on')";>ON</div>
-            <div class="button_normal" id="roof_pwr_off" style="top:86px; left:365px; background-color:#FF0800; color:yellow" onClick="doSend('/roofpwr?off')";>OFF</div>
+            <div class="button_normal" id="roof_pwr_on" style="top:86px; left:300px" onClick="doSend('/roofpwr?on')"><div class="green">ON</div></div>
+            <div class="button_normal" id="roof_pwr_off" style="top:86px; left:365px" onClick="doSend('/roofpwr?off')"><div class="red">OFF</div></div>
 
             <div class="tag_right" style="top:146px; left:175px; font-size:17px">Mount Power</div>
-            <div class="button_normal" id="mount_pwr_on" style="top:136px; left:300px; background-color:#00FF00; color:black" onClick="doSend('/mountpwr?on')";>ON</div>
-            <div class="button_normal" id="roof_pwr_off" style="top:136px; left:365px; background-color:#FF0800; color:yellow" onClick="doSend('/mountpwr?off')";>OFF</div>
+            <div class="button_normal" id="mount_pwr_on" style="top:136px; left:300px" onClick="doSend('/mountpwr?on')"><div class="green">ON</div></div>
+            <div class="button_normal" id="roof_pwr_off" style="top:136px; left:365px" onClick="doSend('/mountpwr?off')"><div class="red">OFF</div></div>
 
-            <div class="button_start_stop" id="start_stop" style="top:195px; left:265px;" onClick="doSend('/startstop')";>START STOP</div>
-            <div class="button_emergency_stop" id="emergency_stop" style="top:280px; left:260px" onClick="doSend('/STOP')";>EMERGENCY STOP</div>
+            <div class="button_start_stop" id="start_stop" style="top:195px; left:265px" onClick="doSend('/startstop')">START STOP</div>
+            <div class="button_emergency_stop" id="emergency_stop" style="top:280px; left:260px" onClick="doSend('/STOP')">EMERGENCY STOP</div>
 
-            <div class="ticker_box" id="ticker" style="top:345px; left:230px">Tick Tock</div>
+            <div class="ticker_box" id="ticker" style="top:345px; left:230px" onClick="doSend('/override')">Tick Tock</div>
         </div>
 
     </body>

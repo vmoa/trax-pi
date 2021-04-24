@@ -64,6 +64,27 @@ div.indicator_wide {
     font-size: 16px;
 }
 
+div.indicator_button_wide {
+    position: fixed;
+    width: 100px;
+    height: 28px;
+    line-height: 28px;
+    border: 1px solid white;
+    border-radius: 5px;
+    padding: 1px;
+    border-color: #B3DADA;
+    background-color: yellow;
+    text-align: center;
+    color: red;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+div.indicator_button_wide:hover {
+    border: 2px solid #888888;
+    padding: 0px;
+}
+
 div.indicator_narrow {
     position: fixed;
     width: 40px;
@@ -105,6 +126,7 @@ div.ticker_box {
     color: #black;
     font-family: "Lucida Console", "Courier New", monospace;
     font-size: 14px;
+    cursor: pointer;
 }
 
 div.button_normal {
@@ -112,15 +134,30 @@ div.button_normal {
     width: 50px;
     height: 38px;
     line-height: 38px;
-    border: 1px solid white;
+    border: 1px solid #B3DADA;
     border-radius: 12px;
+    border-color: 
     padding: 1px;
-    border-color: #B3DADA;
-    background-color: #FF0800;
     text-align: center;
-    color: yellow;
     font-size: 16px;
     cursor: pointer;
+}
+
+div.button_normal:hover {
+    border: 2px solid #888888;
+    padding: 0px;
+}
+
+.red {
+    background-color: #FF0800;
+    color: yellow;
+    border-radius: inherit;
+}
+
+.green {
+    background-color:#00FF00;
+    color:black;
+    border-radius: inherit;
 }
 
 div.button_start_stop {
@@ -128,10 +165,9 @@ div.button_start_stop {
     width: 75px;
     height: 45px;
     line-height: 24px;
-    border: 1px solid white;
+    border: 1px solid #B3DADA;
     border-radius: 12px;
     padding: 10px;
-    border-color: #B3DADA;
     background-color: #00FF00;
     text-align: center;
     color: #0B00FF;
@@ -139,19 +175,28 @@ div.button_start_stop {
     cursor: pointer;
 }
 
+div.button_start_stop:hover {
+    border: 2px solid #888888;
+    padding: 9px;
+}
+
 div.button_emergency_stop {
     position: fixed;
     width: 100px;
     height: 38px;
     line-height: 18px;
-    border: 1px solid white;
+    border: 1px solid #B3DADA;
     border-radius: 12px;
     padding: 2px;
-    border-color: #B3DADA;
     background-color: #FF0800;
     text-align: center;
     color: yellow;
     font-family: sans-serif;
     font-size: 15px;
     cursor: pointer;
+}
+
+div.button_emergency_stop:hover {
+    border: 2px solid #888888;
+    padding: 1px;
 }
