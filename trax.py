@@ -100,6 +100,10 @@ def checkMount():
 def emergencyStop():
     return browser.browser.emergencyStop(app)
 
+@app.route('/override', methods=['GET'])
+def doOverride():
+    return browser.browser.doOverride(app)
+
 
 if __name__ == '__main__':
     initialize()

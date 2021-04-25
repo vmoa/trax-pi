@@ -69,7 +69,8 @@ class Browser:
         """Send intial connect message to browser and make sure indicators are colored"""
         self.sendNotice("Connected!<br/>Welcome to T-Rax!")
         self.updateBrowser()
-
+        if (self.emergencyOverride):
+            self.enterOverrideMode()
 
     def startStop(self, app):
         """Process START/STOP button"""
@@ -198,7 +199,7 @@ class Browser:
         else:    # action == 'OFF'
             if (self.emergencyOverride):
                 self.sendNotice("EMERGENCY OVERRIDE: Turning off mount power", log='INFO')
-                device.Gpio.mntout.off()
+                device.Gpio.mntout.turnOff()
                 return "OK"
             elif (device.Gpio.mntin.isOff()):
                 self.sendNotice("Mount is already off!", log='ERROR')
@@ -220,6 +221,52 @@ class Browser:
         device.Gpio.roofout.turnOff()
         self.sendNotice("EMERGENCY STOP!<br/>Turning off roof power")
         return "Emergency Stop OK"
+
+    def enterOverrideMode(self):
+        logging.info("Entering emergency override mode")
+        self.sendNotice(" EMERGENCY OVERRIDE!!<br/>Be vewwy vewwy careful")
+        sse.sse.send(type='override', mode='on')
+        self.emergencyOverride = 1
+
+    def exitOverrideMode(self):
+        logging.info("Exiting emergency override mode")
+        self.sendNotice("Restoring normal mode")
+        sse.sse.send(type='override', mode='off')
+        self.emergencyOverride = 0
+
+    def checkPassword(self, password):
+        logging.info("checkPassword({})".format(password))
+        if (password == "password"):  # TODO: compare to md5 from a file
+            return True
+        else:
+            return False
+
+    def doOverride(self, app):
+        """Process override actions (hidden modal from clicking ticker)"""
+        if ('on' in flask.request.args):
+            logging.info("Click: Override ON from {}".format(flask.request.remote_addr))
+            if ('password' in flask.request.args):
+                if (self.checkPassword(flask.request.args['password'])):
+                    self.enterOverrideMode()
+                    return 'OK'
+                else:
+                    logging.error("doOverride() bad password")
+                    self.sendNotice("Incorrect password")
+                    return 'ERROR'
+            else:
+                return 'OK'  # Silently ignore no password
+
+        elif ('off' in flask.request.args):
+            logging.info("Click: Override OFF from {}".format(flask.request.remote_addr))
+            self.exitOverrideMode()
+            return 'OK'
+
+        else:
+            logging.error("Click: Override mode UNKNOWN (or missing) from {}".format(flask.request.remote_addr))
+            return 'ERROR'
+
+        logging.error("doOverride() executed unreachable code!")
+        return 'ERROR'
 
     def test(self, app):
         """Test request components; can probably delete"""

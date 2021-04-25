@@ -45,7 +45,33 @@
             <div class="button_start_stop" id="start_stop" style="top:195px; left:265px" onClick="doSend('/startstop')">START STOP</div>
             <div class="button_emergency_stop" id="emergency_stop" style="top:280px; left:260px" onClick="doSend('/STOP')">EMERGENCY STOP</div>
 
-            <div class="ticker_box" id="ticker" style="top:345px; left:230px" onClick="doSend('/override')">Tick Tock</div>
+            <div class="ticker_box" id="ticker" style="top:345px; left:230px" onClick="doOverride()">Tick Tock</div>
+        </div>
+
+        <!-- Password modal for emergency override (js will hide/unhide) -->
+        <div id="passwordModal" class="modal">
+            <div class="modal-header">Emergency override
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-content">
+                <p>Password:
+                <input type="password" id="password" value="">
+                <input type="submit" id="pwsubmit" onClick="overrideOn()">
+                </p>
+            </div>
+        </div>
+
+        <!-- Password modal for emergency override (js will hide/unhide) -->
+        <div id="exitModal" class="modal">
+            <div class="modal-header">Emergency override
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-content">
+                <p>Exit emergency override?&nbsp;
+                <input type="submit" value="Yep" onClick="overrideOff()">&nbsp;
+                <input type="submit" value="Nope" id="nope">
+                </p>
+            </div>
         </div>
 
     </body>
