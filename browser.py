@@ -209,8 +209,8 @@ class Browser:
                 device.Gpio.mntout.turnOff()
                 return 'OK'
 
-    def checkMount(self, app):
-        """Actively check the mount power status"""
+    def checkPark(self, app):
+        """Actively check the mount park status"""
         logging.info("Click: Check Mount from {}".format(flask.request.remote_addr))
         device.Gpio.park.checkParked()
         return 'OK'

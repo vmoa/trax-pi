@@ -92,9 +92,9 @@ def roofPwrOnOff():
 def mountPwrOnOff():
     return browser.browser.mountPower(app)
 
-@app.route('/checkmnt', methods=['GET'])
-def checkMount():
-    return browser.browser.checkMount(app)
+@app.route('/checkpark', methods=['GET'])
+def checkPark():
+    return browser.browser.checkPark(app)
 
 @app.route('/STOP', methods=['GET'])
 def emergencyStop():

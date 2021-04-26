@@ -82,6 +82,7 @@ class Gpio:
 
         def checkParked(self):
             """Check and report park status. Turn on laser and give park sensor time to activate."""
+            browser.browser.sendNotice('Laser ON checking park')
             Gpio.laser.device.on()
             countdown = self.parkSensorDelay
             logging.info("Laser activated; waiting up to {} seconds for park sensor".format(countdown))
@@ -90,7 +91,12 @@ class Gpio:
                 countdown = countdown - 0.1
             Gpio.laser.device.off()
             logging.info("Laser active for {:0.1f} seconds".format(self.parkSensorDelay - countdown))
-            self.parkLastState = park.PARKED if (self.device.value == 1) else park.UNPARKED
+            if (self.device.value == 1):
+                browser.browser.sendNotice('Parked')
+                self.parkLastState = park.PARKED
+            else:
+                browser.browser.sendNotice('Not parked')
+                self.parkLastState = park.UNPARKED
             self.parkLastCheck = int(time.time())  # Track time of check so user can "see" how fresh it is
             browser.browser.updateBrowser()
             logging.info(printStatus())
