@@ -1,9 +1,66 @@
 # T-Rax Raspberry Pi Notes
 
+This is the Raspberry Pi implementation of the T-Rax roof controller for the Robert Ferguson Observatory
+[rfo.org](https://rfo.org).
+
 This design is a logical follow-on to the [Arduino T-Rax](https://github.com/votmoa/trax-arduino) roof controller
 that Jim Finn and David Kensiski created back in 2017. The switch to the Raspberry Pi was driven by the desire
 to implement an [ASCOM Alpaca](https://ascom-standards.org/Developer/Alpaca.htm) interface so that the roof
 could be opened via automation through tools such as [ACP](https://acpx.dc3.com/).
+
+Note that version 1 will simply replace the Arduino functionality.  The ASCOM Alpaca interface will not be
+available unitl version 2.
+
+# Theory of Operation
+
+The server is written in Python 3 and utilizes only two external libraries:
+[GPI Zero](https://gpiozero.readthedocs.io/en/stable/) to control the Raspberry Pi GPIO ports, and
+[Flask](https://flask.palletsprojects.com/en/1.1.x/) to manage the web interface.  (Though Flask
+has a bunch of prerequisites that also need to be loaded.)
+The Browser panel is written in [HTML](https://www.w3schools.com/html/default.asp) using
+Cascading Style Sheets ([CSS](https://www.w3schools.com/css/default.asp)) to control the apperance of the page, and
+[Javascript](https://www.w3schools.com/js/default.asp) to handle communication and control the modal dialogs.
+
+The overall software design is driven through interrupts -- there is no "main loop" as there was in the
+Arduino.
+On start, the server sets  up logging, initializes each of the
+GPIO pins, registers the web interface callbacks, then hands operation over to Flask to listen for incoming requests.
+Hardware state changes trigger callbacks that execute in separate threads, and browser reqeusts trigger Flask
+actions that execute in separte threads.  Finally an "update" thread executes every second to perform household chores.
+
+
+Hardware Interrupt driven
+Each input has a callback
+Wrapper around gpiozero to track output changes
+
+Static html launcher Apache page
+Sets browser window size (can't figure out how else to do it) and calls trax:5000 to paint the canvas
+On load, browser calls /connect to set up a SSE channel from server
+Listens for events on channel and paints display appropriately
+Buttons trigger async http calls to varioius uris that perform safety checks, actions, and send SSE in response
+
+Update thread that rescheules itself every second to perform household chores and proactively update browser.
+Clock is a heartbeat that confirms the server/browser SSE channel is active
+
+# Detailed Operation
+
+Browser
+ calls links that trigger functions to perform operations
+  Check safety logic, trigger outputs
+  Send 
+Javascript 
+
+Update thread 
+
+
+# Future Plans
+
+* Use md5 hashed password instead of hard coding
+* Implement all logging using Flask's logging wrapper (evaluate how useful)
+* Switch from Flask web server to Apache/WCGI
+* Implement ASCOM/Alpaca
+* Make multi-user (eg: for emergency override, notifications)
+
 
 # GPIO -- General Purpose Input/Output
 
