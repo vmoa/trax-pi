@@ -24,7 +24,7 @@ import sse
 import flask
 app = flask.Flask(__name__)
 
-version = 'v0.9'        # T-Rax version
+version = 'v1.0'        # T-Rax version
 statusInterval = 60     # Seconds between status updates without input changes
 
 
