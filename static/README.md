@@ -14,6 +14,6 @@ the window size. For now it is served by Apache so copy it to docroot:
 sudo cp index.html /var/www/html/
 ```
 
-Best practices have Flask sitting behind a WCGI server rather than
-serving directly. That could change how to install this file, but
-that's a future enhancement.
+Best practices for Flask have it sitting behind a WCGI server rather than
+serving directly. That's in our Future Plans and could change how to install
+this file, but that's a future enhancement.
