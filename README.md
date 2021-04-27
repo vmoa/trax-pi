@@ -62,6 +62,19 @@ Update thread
 * Make multi-user (eg: for emergency override, notifications)
 
 
+# Installation
+
+* Python modules?
+* Clone code (TBD)
+* Configure systemd (TBD)
+* Configure Apache
+
+```
+sudo apt-get install apach2
+sudo a2enmod cgi
+sudo systemctl restart apache2
+```
+
 # GPIO -- General Purpose Input/Output
 
 ![GPIO Pinout Diagram](GPIO-Pinout-Diagram-2.png)
