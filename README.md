@@ -4,9 +4,9 @@ This is the Raspberry Pi implementation of the T-Rax roof controller for the Rob
 [rfo.org](https://rfo.org).
 
 This design is a logical follow-on to the [Arduino T-Rax](https://github.com/votmoa/trax-arduino) roof controller
-that Jim Finn and David Kensiski created back in 2017. The switch to the Raspberry Pi was driven by the desire
+created back in 2017 by Jim Finn, David Kensiski and Jay Pacheco.  The switch to the Raspberry Pi was driven by the desire
 to implement an [ASCOM Alpaca](https://ascom-standards.org/Developer/Alpaca.htm) interface so that the roof
-could be opened via automation through tools such as [ACP](https://acpx.dc3.com/).
+can be opened via automation through tools such as [ACP](https://acpx.dc3.com/).
 
 Note that version 1 will simply replace the Arduino functionality.  The ASCOM Alpaca interface will not be
 available unitl version 2.
@@ -21,8 +21,7 @@ The Browser panel is written in [HTML](https://www.w3schools.com/html/default.as
 Cascading Style Sheets ([CSS](https://www.w3schools.com/css/default.asp)) to control the apperance of the page, and
 [Javascript](https://www.w3schools.com/js/default.asp) to handle communication and control the modal dialogs.
 
-The overall software design is driven through interrupts -- there is no "main loop" as there was in the
-Arduino.
+The overall software design is driven through interrupts -- there is no "main loop" as there was in the Arduino.
 On start, the server sets  up logging, initializes each of the
 GPIO pins, registers the web interface callbacks, then hands operation over to Flask to listen for incoming requests.
 Hardware state changes trigger callbacks that execute in separate threads, and browser reqeusts trigger Flask
