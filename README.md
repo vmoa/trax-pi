@@ -11,7 +11,16 @@ can be opened via automation through tools such as [ACP](https://acpx.dc3.com/).
 Note that version 1 will simply replace the Arduino functionality.  The ASCOM Alpaca interface will not be
 available unitl version 2.
 
-# Theory of Operation
+# Table of Contents
+
+1. [Theory of Operation](#general-theory-of-operation)
+1. [Detailed Operation](#detailed-operation)
+1. [Future Plans](#future-plans)
+1. [Installation](#installation)
+1. [GPIO Notes](#gpio-notes)
+
+
+# General Theory of Operation
 
 The server is written in Python 3 and utilizes only two external libraries:
 [GPI Zero](https://gpiozero.readthedocs.io/en/stable/) to control the Raspberry Pi GPIO ports, and
@@ -24,24 +33,44 @@ Cascading Style Sheets ([CSS](https://www.w3schools.com/css/default.asp)) to con
 The overall software design is driven through interrupts -- there is no "main loop" as there was in the Arduino.
 On start, the server sets  up logging, initializes each of the
 GPIO pins, registers the web interface callbacks, then hands operation over to Flask to listen for incoming requests.
-Hardware state changes trigger callbacks that execute in separate threads, and browser reqeusts trigger Flask
-actions that execute in separte threads.  Finally an "update" thread executes every second to perform household chores.
+There are three flavors of threads:
 
+* Hardware input state changes trigger GPI Zero callbacks that execute in individual threads.
+* Browser reqeusts trigger Flask actions that execute in separte threads.
+* Finally an "update" thread executes every second to perform household chores.
+
+There is a static html launcher page that is currently served directly by Apache.  This sets browser window size
+(I don't think a window can reliably change its size once launched) and points it at http://trax:5000 which is where
+trax.py is listening (by way of Flask).  This sends a template web page to paint the browser.  Once painted,
+Javascript in the browser connects back to trax and and set up a server-sent events channel
+([SSE](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events))
+so the server can pro-actively update the browser.  Browser javascript listens on this channel and paints the
+display appropriately.  Browser buttons trigger async HTTP calls to varioius
+trax URIs that perform an appropriate action, which in turn triggers an SSE response.
+
+Breaking this down, the connection flow is as follows:
+
+1. User connects to http://trax and clicks the "Launch" button
+1. Browser launches the T-Rax browser window pointing to http://trax:5000
+1. Server sends static HTML, CSS and Javascript to paint the browser
+1. After panting, browser javascript connects to http://trax:5000/connect to set up SSE channel
+
+Then in normal operation:
+
+* Server sends events via SSE when something changes
+  * Browser executes javascript to handle the event
+* Browser buttons send HTTP asynchronous requests to http://trax:5000/{whatever} to trigger actions
+  * Sever performs the actions and responsds via SSE
+
+The update thread is simply a thread that runs on startup to perform household chores and proactively update the
+browser.  It then reschedules itself to run again one second later.  This thread updates the clock on the T-Rax
+page to act as a hardbeat to confirm the server/browser SSE channel is active
+
+# Detailed Operation
 
 Hardware Interrupt driven
 Each input has a callback
 Wrapper around gpiozero to track output changes
-
-Static html launcher Apache page
-Sets browser window size (can't figure out how else to do it) and calls trax:5000 to paint the canvas
-On load, browser calls /connect to set up a SSE channel from server
-Listens for events on channel and paints display appropriately
-Buttons trigger async http calls to varioius uris that perform safety checks, actions, and send SSE in response
-
-Update thread that rescheules itself every second to perform household chores and proactively update browser.
-Clock is a heartbeat that confirms the server/browser SSE channel is active
-
-# Detailed Operation
 
 Browser
  calls links that trigger functions to perform operations
@@ -49,16 +78,19 @@ Browser
   Send 
 Javascript 
 
+ (actually `<DIV>` onClick actions)
+
 Update thread 
 
+# Hardware Theory
 
 # Future Plans
 
-* Use md5 hashed password instead of hard coding
-* Implement all logging using Flask's logging wrapper (evaluate how useful)
-* Switch from Flask web server to Apache/WCGI
-* Implement ASCOM/Alpaca
-* Make multi-user (eg: for emergency override, notifications)
+- [ ] Use md5 hashed password instead of hard coding
+- [ ] Implement all logging using Flask's logging wrapper (evaluate how useful)
+- [ ] Switch from Flask web server to Apache/WCGI
+- [ ] Implement ASCOM/Alpaca
+- [ ] Make multi-user (eg: for emergency override, notifications)
 
 
 # Installation
@@ -74,7 +106,9 @@ sudo a2enmod cgi
 sudo systemctl restart apache2
 ```
 
-# GPIO -- General Purpose Input/Output
+# GPIO Notes
+
+General Purpose Input/Output
 
 ![GPIO Pinout Diagram](GPIO-Pinout-Diagram-2.png)
 
