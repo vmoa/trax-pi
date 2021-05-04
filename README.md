@@ -68,21 +68,28 @@ page to act as a hardbeat to confirm the server/browser SSE channel is active
 
 # Detailed Operation
 
-Hardware Interrupt driven
-Each input has a callback
-Wrapper around gpiozero to track output changes
+* Hardware Interrupt driven
+* Each input has a callback
+* Wrapper around gpiozero to track output changes
 
-Browser
- calls links that trigger functions to perform operations
-  Check safety logic, trigger outputs
-  Send 
-Javascript 
+* Browser
+* calls links that trigger functions to perform operations
+* Check safety logic, trigger outputs
+* Send SSE
+* Javascript paints browser
 
- (actually `<DIV>` onClick actions)
+* Buttons are (actually `<DIV>` onClick actions)
 
-Update thread 
+* Update thread 
 
-# Hardware Theory
+# Hardware Design
+
+* Raspberry Pi 3+
+* Outputs: GPIO --> 6-pin header --> Relay board --> Relays supply 12v signal to (all?) devices (fob), roofPower, mountPower, laser
+* Inputs: 8-pin header --> low pass RC filter, current limiter --> optocoupler 4N25 --> GPIO
+* BldgPower: 2-pin header --> (same path) except that return is direct, not grounded
+* Heartbeat: GPIO --> current limiter --> Green LED
+* Power: 3.3v --> current limiter --> Red LED
 
 # Future Plans
 
