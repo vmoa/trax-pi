@@ -13,14 +13,15 @@ available unitl version 2.
 
 # Table of Contents
 
-1. [Theory of Operation](#general-theory-of-operation)
-1. [Detailed Operation](#detailed-operation)
+1. [Theory of Operation](#theory-of-operation)
+1. [Detailed Design](#detailed-design)
+1. [Hardware Design](#hardware-design)
 1. [Future Plans](#future-plans)
 1. [Installation](#installation)
 1. [GPIO Notes](#gpio-notes)
 
 
-# General Theory of Operation
+# Theory of Operation
 
 The server is written in Python 3 and utilizes only two external libraries:
 [GPI Zero](https://gpiozero.readthedocs.io/en/stable/) to control the Raspberry Pi GPIO ports, and
@@ -66,7 +67,7 @@ The update thread is simply a thread that runs on startup to perform household c
 browser.  It then reschedules itself to run again one second later.  This thread updates the clock on the T-Rax
 page to act as a hardbeat to confirm the server/browser SSE channel is active
 
-# Detailed Operation
+# Detailed Design
 
 * Hardware Interrupt driven
 * Each input has a callback
@@ -84,12 +85,23 @@ page to act as a hardbeat to confirm the server/browser SSE channel is active
 
 # Hardware Design
 
-* Raspberry Pi 3+
-* Outputs: GPIO --> 6-pin header --> Relay board --> Relays supply 12v signal to (all?) devices (fob), roofPower, mountPower, laser
-* Inputs: 8-pin header --> low pass RC filter, current limiter --> optocoupler 4N25 --> GPIO
-* BldgPower: 2-pin header --> (same path) except that return is direct, not grounded
-* Heartbeat: GPIO --> current limiter --> Green LED
-* Power: 3.3v --> current limiter --> Red LED
+The system is built around a [Raspberry Pi 3 B+](https://www.raspberrypi.org/products/raspberry-pi-3-model-b-plus/)
+computer, though any Pi that sports the 40-pin GPIO header should work.  The header is routed to a custom circuit
+board that splits out the GPIO inputs and outputs.  The GPIO ports run at 3.3v so output ports control relays which
+deliver 12V to the external devices they control.  Inputs are fed through optoisolators which deliver 3.3v to GPIO
+input ports.
+
+![block diagram](TBD)
+
+Input and output flow:
+
+* **Outputs**: GPIO  ports --> 6-pin header --> Relay board --> Relays supply 12v signal to RJ11 jacks --> cabled to devices
+  (fob, roofPower, mountPower, laser)
+* **Inputs**: from devices --> RJ11 jacks --> 8-pin header --> low pass RC filter, current limiter --> optocoupler 4N25
+  --> GPIO ports
+* **BldgPower**: 12v barrel connector --> 2-pin header --> same path as inputs except that return is direct, not grounded
+* **Heartbeat LED**: GPIO port --> current limiter --> Green LED
+* **Power LED**: 3.3v from Pi --> current limiter --> Red LED
 
 # Future Plans
 
