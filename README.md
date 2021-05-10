@@ -88,20 +88,68 @@ page to act as a hardbeat to confirm the server/browser SSE channel is active
 The system is built around a [Raspberry Pi 3 B+](https://www.raspberrypi.org/products/raspberry-pi-3-model-b-plus/)
 computer, though any Pi that sports the 40-pin GPIO header should work.  The header is routed to a custom circuit
 board that splits out the GPIO inputs and outputs.  The GPIO ports run at 3.3v so output ports control relays which
-deliver 12V to the external devices they control.  Inputs are fed through optoisolators which deliver 3.3v to GPIO
-input ports.
+deliver 12V to the external devices they control.  Inputs are fed through RC low-pass filters (to reduce the effect
+of electrical noise), current limiting resistors and optoisolators which ultimately deliver 3.3v to GPIO input ports.
 
 ![block diagram](TBD)
 
-Input and output flow:
+* **WeatherOK**:
+This is the hardware signal from the [Boltwood Cloud Sensor](https://diffractionlimited.com/product/boltwood-cloud-sensor-ii/).
+The configuration of the Clarity II software on the CCD PC determines what conditions trigger a weather alert.
+The input feeds an optoisolator which triggers a GPIO port of the Raspberry Pi.  The Boltwood signal is active low
+hence the name of the port is "weather OK".
 
-* **Outputs**: GPIO  ports --> 6-pin header --> Relay board --> Relays supply 12v signal to RJ11 jacks --> cabled to devices
-  (fob, roofPower, mountPower, laser)
-* **Inputs**: from devices --> RJ11 jacks --> 8-pin header --> low pass RC filter, current limiter --> optocoupler 4N25
-  --> GPIO ports
-* **BldgPower**: 12v barrel connector --> 2-pin header --> same path as inputs except that return is direct, not grounded
-* **Heartbeat LED**: GPIO port --> current limiter --> Green LED
-* **Power LED**: 3.3v from Pi --> current limiter --> Red LED
+* **Mount Power**: There are two ports used for the mount: mountPowerOut and mountPowerIn.  mountPowerOut triggers a
+relay on the TRax Control Board which in turn closes a remote circuit in the Mount Power Controller under the telescope.
+Power for that circuit comes from the Mount Power Controller.  The closing of that circuit triggers a relay in
+the Mount Power Controller that powers the 12V supply that drives the mount.  A secondary contact on that relay 
+closes the mountPowerIn circuit which is fed by 12V from the TRax Control Board.  That is fed through an optoisolator
+to the GPIO port on the Raspberry Pi to provide positive feedback of mount power.
+
+* **Roof Power**: Similarly there are two ports used for roof power: roofPowerOut and roofPowerIn.  These are designed
+virtually identically to the mount power ports described above.
+
+* **Open / Close**: Mounted on the roof rails are magnetic reed relays (alarm sensors) that engage when the roof is
+either fully open or fully closed.  The TRax Control Board provides 12V to these relays through the Open/Close port.
+Singal from these are fed through optoisolators to the GPIO ports on the Raspberry Pi.
+
+* **Fob**: The remote Fob is the circuit board from an actual garage door opener (part [TBD]()) that has been mounted
+and wired to the Fob RJ11 port.  This port has two cirucits -- 12V to power the fob (replaces the battery), and a
+normally open cirucit that closes to simulate pressing the fob button.  The fob GPIO port on the Raspberry Pi triggers
+a relay which closes the fob button circuit. 
+
+* **Park / Laser**: Because there is no place on the mount where physical relays can be mounted to postively confirm
+park position, we have built a laser park sensor.  This consists of a low power laser on the mount dovetail plate and
+a corresponding laser detector attached to the north wall.  These are aligned so that the detector triggers only when
+the mount is in park position.
+
+  The laser on the Raspberry Pi drives a relay which delivers 12V to the laser unit on the telescope mount.  The laser
+  This is fed to a voltage regulator which delivers the 5V required by the laser diode.  The regulator is situated near
+  the diode to compensate for the DC voltage loss in the wires from TRax to the mount.
+
+  The park sensor is similarly fed with 12V which drives a voltage regulator that delivers 5V to the detector circuit.
+  When the detector senses light from the laser, it raises the detector circuit to 5V.  This is routed back to TRax and
+  fed through an optoisolator to the GPIO port on the Raspberry Pi.
+
+* **Building Power**: Since TRax is fed via UPS power, the building power port is fed by a 12V wall wart plugged into
+a non-UPS powered outlet.  When there is a power failure, this voltage drops and we are able to detect the outage to
+prevent opening (but not closing!) of the roof.  The 12V is fed through an optoisolator to the GPIO port on the
+Raspberry Pi.  It should be noted that this entire 12V source is isolated from the rest of the TRax circuit.  The
+input side of the optoisolator is feed directly from this 12V source and (unlike the other circuits) is *not*
+connected to the Control Board ground.
+
+* **Heart LED**: This is fed directly from a GPIO port on the Raspberry Pi (through a current limiting resistor) and
+flashes to indicate that the TRax software is running and healthy.
+
+* **Power LED**: This is fed by the 3.3V power rail on the Raspberry Pi (thorugh a current limiting resistor) and
+indicates that the Raspberry Pi has power.
+
+* **Grove LCD**: This port is wired for the [I2C](https://www.circuitbasics.com/basics-of-the-i2c-communication-protocol/)
+serial bus required by the [Grove RGB LCD](https://wiki.seeedstudio.com/Grove-LCD_RGB_Backlight/).  We route the `SDA`
+and `SCL` ports from the Raspberry Pi as well as the requisite ground and +5V.  Note that this uses +5V, not the +3.3V
+of the rest of the controller.
+
+  As of this writing the Python code does not yet implement the Grove LCD.
 
 # Future Plans
 
@@ -109,6 +157,7 @@ Input and output flow:
 - [ ] Implement all logging using Flask's logging wrapper (evaluate how useful)
 - [ ] Switch from Flask web server to Apache/WCGI
 - [ ] Implement ASCOM/Alpaca
+- [ ] Implement the Grove LCD
 - [ ] Make multi-user (eg: for emergency override, notifications)
 
 
