@@ -1,6 +1,13 @@
 __pycache__
 foo*
 
+# KiCad artifacts #
+###################
+*-bak
+fp-info-cache
+fp-lib-table
+sym-lib-table
+
 # Compiled source #
 ###################
 *.com
