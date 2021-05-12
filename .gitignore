@@ -7,6 +7,8 @@ foo*
 fp-info-cache
 fp-lib-table
 sym-lib-table
+*-rescue.dcm
+*-rescue.lib
 
 # Compiled source #
 ###################

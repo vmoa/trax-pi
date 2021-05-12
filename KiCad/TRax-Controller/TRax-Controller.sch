@@ -210,7 +210,7 @@ F 3 "~" H 1800 5500 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L TRax-RaspberryPi-rescue:Raspberry_Pi_TRax-myLib J6
+L TRax-Controller-rescue:Raspberry_Pi_TRax-myLib-TRax-RaspberryPi-rescue J6
 U 1 1 6089B0A9
 P 8500 3500
 F 0 "J6" H 9250 4900 50  0000 C CNN
@@ -1197,6 +1197,4 @@ $EndComp
 Wire Wire Line
 	8500 2000 8500 2100
 Connection ~ 8500 2100
-Entry Wire Line
-	1600 0    1700 100 
 $EndSCHEMATC

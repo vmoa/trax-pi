@@ -226,11 +226,11 @@ X ~ 6 300 100 100 L 50 50 1 1 P
 ENDDRAW
 ENDDEF
 #
-# TRax-RaspberryPi-rescue_Raspberry_Pi_TRax-myLib
+# TRax-Controller-rescue_Raspberry_Pi_TRax-myLib-TRax-RaspberryPi-rescue
 #
-DEF TRax-RaspberryPi-rescue_Raspberry_Pi_TRax-myLib J 0 40 Y Y 1 F N
+DEF TRax-Controller-rescue_Raspberry_Pi_TRax-myLib-TRax-RaspberryPi-rescue J 0 40 Y Y 1 F N
 F0 "J" -700 1250 50 H V L BNN
-F1 "TRax-RaspberryPi-rescue_Raspberry_Pi_TRax-myLib" 400 -1250 50 H V L TNN
+F1 "TRax-Controller-rescue_Raspberry_Pi_TRax-myLib-TRax-RaspberryPi-rescue" 400 -1250 50 H V L TNN
 F2 "" 0 0 50 H I C CNN
 F3 "" 0 0 50 H I C CNN
 $FPLIST
