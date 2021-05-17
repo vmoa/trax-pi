@@ -9,6 +9,8 @@
 
 import argparse
 import datetime
+import errno
+import fcntl
 import logging
 import os
 import signal
@@ -24,9 +26,10 @@ import sse
 import flask
 app = flask.Flask(__name__)
 
-version = 'v1.0'        # T-Rax version
+version = 'v1.0.1'        # T-Rax version
 statusInterval = 60     # Seconds between status updates without input changes
-
+lockfile = 0            # Global so when we lock we keep it
+lockfilename = '/tmp/trax.lock'
 
 def initialize():
     # Parse command line args
@@ -37,6 +40,22 @@ def initialize():
     parser.add_argument('--debug', dest='debug', action='store_true', help='include DEBUG messages in logs')
     parser.add_argument('--log-file', '-L', dest='logfile', action='store', help='log filename (default {})'.format(default_logfile))
     args = parser.parse_args()
+
+    # Acquire an exclusive lock
+    global lockfile
+    try:
+        lockfile = open(lockfilename, "a+")
+        if (lockfile):
+            fcntl.lockf(lockfile, fcntl.LOCK_EX|fcntl.LOCK_NB)
+    except OSError as e:
+        if (e.errno == errno.EACCES or e.errno == errno.EAGAIN):
+            sys.exit("ABORT! trax is already running!")
+
+    # Annotate the lock file with our pid
+    lockfile.seek(0)
+    lockfile.truncate()
+    lockfile.write("{}\n".format(os.getpid()))
+    lockfile.flush()
 
     # Set up logging
     # TODO consider using flask logging interface https://flask.palletsprojects.com/en/1.1.x/logging/
