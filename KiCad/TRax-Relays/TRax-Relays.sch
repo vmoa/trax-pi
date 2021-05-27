@@ -4,9 +4,9 @@ EELAYER END
 $Descr A 11000 8500
 encoding utf-8
 Sheet 1 1
-Title "Relays & Connector wiring"
-Date "2021-05-09"
-Rev "v1.2"
+Title "T-Rax Relays & Connector wiring"
+Date "2021-05-22"
+Rev "v1.2b"
 Comp "Robert Ferguson Observatory"
 Comment1 "David Kensiski"
 Comment2 ""
@@ -54,7 +54,7 @@ Orange
 Text Notes 7850 2600 3    50   ~ 0
 Green
 $Comp
-L Connector:6P4C J1
+L Connector:6P6C J1
 U 1 1 609A144B
 P 1600 1600
 F 0 "J1" H 1200 1600 50  0000 C CNN
@@ -65,7 +65,7 @@ F 3 "~" V 1600 1625 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector:6P4C J3
+L Connector:6P6C J3
 U 1 1 609A2420
 P 1600 3600
 F 0 "J3" H 1200 3600 50  0000 C CNN
@@ -76,7 +76,7 @@ F 3 "~" V 1600 3625 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector:6P4C J2
+L Connector:6P6C J2
 U 1 1 609A2BC1
 P 1600 2600
 F 0 "J2" H 1200 2600 50  0000 C CNN
@@ -87,7 +87,7 @@ F 3 "~" V 1600 2625 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector:6P4C J4
+L Connector:6P6C J4
 U 1 1 609A37E0
 P 1600 4600
 F 0 "J4" H 1200 4600 50  0000 C CNN
@@ -98,7 +98,7 @@ F 3 "~" V 1600 4625 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector:6P4C J5
+L Connector:6P6C J5
 U 1 1 609A462B
 P 1600 5600
 F 0 "J5" H 1200 5600 50  0000 C CNN
@@ -153,7 +153,7 @@ F 3 "" H 6400 5350 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 Text Notes 1050 7550 0    50   ~ 0
-RJ Color Code: Telco (Cat5)\n4. Yellow (Orange/White)\n3. Green  (White/Blue)\n2. Red    (Blue/White)\n1. Black  (White/Orange
+RJ Color Code: Telco (Cat5)\n5. Yellow (Orange/White)\n4. Green  (White/Blue)\n3. Red    (Blue/White)\n2. Black  (White/Orange
 Wire Wire Line
 	2000 1600 3150 1600
 Wire Wire Line
@@ -241,7 +241,7 @@ Wire Wire Line
 Wire Wire Line
 	5950 4700 5600 4700
 $Comp
-L Connector:6P4C J6
+L Connector:6P6C J6
 U 1 1 609A546C
 P 1600 6600
 F 0 "J6" H 1200 6600 50  0000 C CNN
@@ -251,7 +251,7 @@ F 3 "~" V 1600 6625 50  0001 C CNN
 	1    1600 6600
 	1    0    0    -1  
 $EndComp
-Text Notes 2650 5400 2    50   ~ 0
+Text Notes 3400 5400 2    50   ~ 0
 12V switched
 Wire Wire Line
 	2000 5700 4350 5700
@@ -321,18 +321,9 @@ Wire Wire Line
 Wire Wire Line
 	5100 3400 5500 3400
 Wire Wire Line
-	5500 3400 5500 5400
-Wire Wire Line
 	4150 3400 4150 5400
 Wire Wire Line
 	2000 6700 4350 6700
-Wire Wire Line
-	5400 7100 5400 5500
-Wire Wire Line
-	5400 5500 5950 5500
-Wire Wire Line
-	5400 5500 5400 3500
-Connection ~ 5400 5500
 Wire Wire Line
 	5100 3500 5400 3500
 Wire Wire Line
@@ -348,7 +339,7 @@ Wire Wire Line
 	2000 6400 4250 6400
 Wire Wire Line
 	4250 3500 4250 6400
-Text Notes 2250 6400 2    50   ~ 0
+Text Notes 3050 6400 2    50   ~ 0
 12V\n
 Wire Wire Line
 	3950 3100 4550 3100
@@ -537,8 +528,6 @@ Wire Wire Line
 	7250 3100 8350 3100
 Wire Wire Line
 	5100 3000 5850 3000
-Wire Wire Line
-	5500 5400 5950 5400
 Wire Notes Line
 	8850 2350 8850 5750
 Wire Notes Line
@@ -547,8 +536,75 @@ Wire Notes Line
 	4850 5750 8850 5750
 Wire Bus Line
 	5350 1950 10100 1950
-Wire Bus Line
-	5250 1150 5250 1850
+NoConn ~ 2000 6300
+NoConn ~ 2000 6800
+NoConn ~ 2000 5800
+NoConn ~ 2000 5300
+NoConn ~ 2000 4800
+NoConn ~ 2000 4300
+NoConn ~ 2000 3800
+NoConn ~ 2000 3300
+NoConn ~ 2000 2800
+NoConn ~ 2000 2300
+NoConn ~ 2000 1800
+NoConn ~ 2000 1300
+Text Notes 2200 6700 0    50   ~ 0
+black
+Text Notes 2200 6600 0    50   ~ 0
+blue
+Text Notes 2200 6500 0    50   ~ 0
+yellow
+Text Notes 2200 6400 0    50   ~ 0
+red
+Text Notes 2200 5700 0    50   ~ 0
+black
+Text Notes 2200 4700 0    50   ~ 0
+black
+Text Notes 2200 3500 0    50   ~ 0
+black
+Text Notes 2200 2700 0    50   ~ 0
+blue
+Text Notes 2200 1600 0    50   ~ 0
+violet
+Text Notes 2200 5600 0    50   ~ 0
+white
+Text Notes 2200 5500 0    50   ~ 0
+black
+Text Notes 2200 5400 0    50   ~ 0
+white
+Text Notes 2200 4600 0    50   ~ 0
+orange
+Text Notes 2200 4500 0    50   ~ 0
+black
+Text Notes 2200 4400 0    50   ~ 0
+yellow
+Text Notes 2200 3600 0    50   ~ 0
+green
+Text Notes 2200 3700 0    50   ~ 0
+blue
+Text Notes 2200 3400 0    50   ~ 0
+orange
+Text Notes 2200 2600 0    50   ~ 0
+blue
+Text Notes 2200 2500 0    50   ~ 0
+black
+Text Notes 2200 2400 0    50   ~ 0
+green
+Text Notes 2200 1500 0    50   ~ 0
+black
+Wire Wire Line
+	5400 3500 5400 5400
+Wire Wire Line
+	5500 5500 5950 5500
+Wire Wire Line
+	5500 3400 5500 5500
+Wire Wire Line
+	5950 5400 5400 5400
 Wire Bus Line
 	7950 2450 10100 2450
+Wire Bus Line
+	5250 1150 5250 1850
+Connection ~ 5400 5400
+Wire Wire Line
+	5400 5400 5400 7100
 $EndSCHEMATC
