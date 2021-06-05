@@ -1,0 +1,26 @@
+#
+# Simple systemctl service for trax
+#
+# Place this file in /etc/systemd/system
+#   sudo cp trax.service /etc/systemd/system/
+# and enable with systemctl:
+#   sudo systemctl enable trax.service
+# The final file will wind up in /lib/systemd/system
+#
+
+[Unit]
+Description=TRax Roof Controller
+After=local-fs.target network.target remote-fs.target
+Requires=local-fs.target network.target
+
+[Service]
+Type=simple
+User=trax
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/games:/usr/games
+ExecStart=/home/trax/trax-pi/trax.py
+ExecStop=/usr/bin/pkill trax.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
