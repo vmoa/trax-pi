@@ -53,5 +53,9 @@ class MessageAnnouncer:
             msg = f'event: {event}\n{msg}'
         return msg
 
+    def count(self):
+        """Return the number of active connections"""
+        return len(self.listeners)
+
 # Instantiate the queue
 sse = MessageAnnouncer()

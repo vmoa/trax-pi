@@ -116,10 +116,10 @@ div.notice_box {
     font-size: 14px;
 }
 
-/* Text area: 32 wide x 3 tall */
+/* Ticker box along the bottom */
 div.ticker_box {
     position: fixed;
-    width: 188px;
+    width: 420px;
     height: 14px;
     line-height: 14px;
     text-align: right;

@@ -10,6 +10,7 @@ import threading
 import time
 
 import browser
+import sse
 import util
 
 statusInterval = 60     # Seconds between status updates without input changes
@@ -205,7 +206,9 @@ def beatHeart(output=0, step=0):
 
 def perSecond():
     """Callback that runs every second to perform housekeeping duties"""
-    browser.browser.sendTicker(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    browser.browser.sendTicker("%s&nbsp;&nbsp;&nbsp;%s" % (
+        "[%d connection%s]" %(sse.sse.count(), "" if sse.sse.count()==1 else "s"),
+        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     if (int(datetime.datetime.now().second) % 2 == 0):
         beatHeart(Gpio.heart.device)
         browser.browser.updateBrowser()
