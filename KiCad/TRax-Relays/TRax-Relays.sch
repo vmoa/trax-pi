@@ -109,7 +109,7 @@ F 3 "~" V 1600 5625 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L myLib:Relay_Module K1
+L TRax-Relays-rescue:Relay_Module-myLib K1
 U 1 1 609A763A
 P 6400 2950
 F 0 "K1" H 6400 3225 50  0000 C CNN
@@ -120,7 +120,7 @@ F 3 "" H 6400 2950 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L myLib:Relay_Module K2
+L TRax-Relays-rescue:Relay_Module-myLib K2
 U 1 1 609A9B89
 P 6400 3750
 F 0 "K2" H 6400 4025 50  0000 C CNN
@@ -131,7 +131,7 @@ F 3 "" H 6400 3750 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L myLib:Relay_Module K3
+L TRax-Relays-rescue:Relay_Module-myLib K3
 U 1 1 609AA6A6
 P 6400 4550
 F 0 "K3" H 6400 4825 50  0000 C CNN
@@ -142,7 +142,7 @@ F 3 "" H 6400 4550 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L myLib:Relay_Module K4
+L TRax-Relays-rescue:Relay_Module-myLib K4
 U 1 1 609AAFF2
 P 6400 5350
 F 0 "K4" H 6400 5625 50  0000 C CNN
@@ -600,11 +600,11 @@ Wire Wire Line
 	5500 3400 5500 5500
 Wire Wire Line
 	5950 5400 5400 5400
+Connection ~ 5400 5400
+Wire Wire Line
+	5400 5400 5400 7100
 Wire Bus Line
 	7950 2450 10100 2450
 Wire Bus Line
 	5250 1150 5250 1850
-Connection ~ 5400 5400
-Wire Wire Line
-	5400 5400 5400 7100
 $EndSCHEMATC
