@@ -76,6 +76,9 @@ def initialize():
     gpio = device.Gpio(args.simulator)
     logging.info(device.printStatus())
 
+    # Let browser know our version
+    browser.browser.setVersion(version)
+
     # Enter test mode if requested
     if (args.test_mode):
         # TODO: pass in gpio instead of using xxx.by_name

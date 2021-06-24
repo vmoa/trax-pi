@@ -14,6 +14,11 @@ import sse
 class Browser:
 
     emergencyOverride = 0
+    version = "unknown"  # Will be set at startup
+
+    def setVersion(self, version):
+        """Set the version so browser callbacks can report it"""
+        self.version = version
 
     def sendNotice(self, msg, log=''):
         """Update the notice area on the browser and optionally log the message"""
@@ -67,7 +72,7 @@ class Browser:
 
     def initialConnect(self):
         """Send intial connect message to browser and make sure indicators are colored"""
-        self.sendNotice("Connected!<br/>Welcome to T-Rax!")
+        self.sendNotice("Connected!<br/>Welcome to T-Rax!<br/>Version %s" % self.version)
         self.updateBrowser()
         if (self.emergencyOverride):
             self.enterOverrideMode()
