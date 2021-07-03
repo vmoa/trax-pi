@@ -137,11 +137,11 @@ X Pin_8 8 -200 -400 150 R 50 50 1 1 P
 ENDDRAW
 ENDDEF
 #
-# myLib_Relay_Module
+# TRax-Relays-rescue_Relay_Module-myLib
 #
-DEF myLib_Relay_Module K 0 40 Y Y 1 F N
+DEF TRax-Relays-rescue_Relay_Module-myLib K 0 40 Y Y 1 F N
 F0 "K" 300 150 50 H V C CNN
-F1 "myLib_Relay_Module" -100 150 50 H V C CNN
+F1 "TRax-Relays-rescue_Relay_Module-myLib" -100 150 50 H V C CNN
 F2 "" 0 0 50 H I C CNN
 F3 "" 0 0 50 H I C CNN
 DRAW
