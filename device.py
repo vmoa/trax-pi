@@ -37,11 +37,11 @@ class Gpio:
         Gpio.open = self.Sensor(pin=23, name='open')      # roofOpen
         Gpio.close = self.Sensor(pin=24, name='close')    # roofClosed
 
-        Gpio.heart = self.Control(pin=13, name='heart')                       # heartLed
-        Gpio.mntout = self.Control(pin=6, name='mntout', active_high=False)   # mountPowerOut
-        Gpio.roofout = self.Control(pin=5, name='roofout', active_high=False) # roofPowerOut
-        Gpio.laser = self.Control(pin=16, name='laser')                       # laserPowerOut
-        Gpio.fob = self.Control(pin=26, name='fob')                           # fobOutput
+        Gpio.heart = self.Control(pin=13, name='heart')    # heartLed
+        Gpio.mntout = self.Control(pin=6, name='mntout')   # mountPowerOut
+        Gpio.roofout = self.Control(pin=5, name='roofout') # roofPowerOut
+        Gpio.laser = self.Control(pin=16, name='laser')    # laserPowerOut
+        Gpio.fob = self.Control(pin=26, name='fob')        # fobOutput
 
 
     class Sensor:
