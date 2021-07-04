@@ -7,6 +7,10 @@ controller board.
 (Note that instrucitons were initally written using the sensor cables and
 have not yet been tested with the direct controller connection.)
 
+[Return](../README.md) to the T-Rax main page.
+
+---
+
 _TODO_: Add wiring details and options
 
 Note on `BldgPwr`: The pushbutton switch is used when connecting directly to the controller board;
