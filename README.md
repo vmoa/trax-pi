@@ -11,6 +11,8 @@ can be opened via automation through tools such as [ACP](https://acpx.dc3.com/).
 Note that version 1 will simply replace the Arduino functionality.  The ASCOM Alpaca interface will not be
 available unitl version 2.
 
+Testing insturctions can be found in the [test plan](doc/TestPlan.md) document.
+
 # Table of Contents
 
 1. [Theory of Operation](#theory-of-operation)
