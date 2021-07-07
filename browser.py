@@ -153,9 +153,6 @@ class Browser:
                 self.sendNotice("EMERGENCY OVERRIDE: Turning on roof power", log='INFO')
                 device.Gpio.roofout.turnOn()
                 return "OK"
-            elif (device.Gpio.roofin.isOn()):
-                self.sendNotice("Roof is already on!", log='ERROR')
-                return 'ERROR'
             else:
                 self.sendNotice("Turning on roof power", log='INFO')
                 device.Gpio.roofout.turnOn()
@@ -166,9 +163,6 @@ class Browser:
                 self.sendNotice("EMERGENCY OVERRIDE: Turning off roof power", log='INFO')
                 device.Gpio.roofout.turnOff()
                 return "OK"
-            elif (device.Gpio.roofin.isOff()):
-                self.sendNotice("Roof is already off!", log='ERROR')
-                return 'ERROR'
             else:
                 self.sendNotice("Turning off roof power", log='INFO')
                 device.Gpio.roofout.turnOff()
@@ -190,9 +184,6 @@ class Browser:
                 self.sendNotice("EMERGENCY OVERRIDE: Turning on mount power", log='INFO')
                 device.Gpio.mntout.turnOn()
                 return "OK"
-            elif (device.Gpio.mntout.isOn()):
-                self.sendNotice("Mount is already on!", log='ERROR')
-                return 'ERROR'
             elif (device.Gpio.open.isOff()):
                 self.sendNotice("Cannot turn on mount: roof is not open", log='ERROR')
                 return 'ERROR'
@@ -206,9 +197,6 @@ class Browser:
                 self.sendNotice("EMERGENCY OVERRIDE: Turning off mount power", log='INFO')
                 device.Gpio.mntout.turnOff()
                 return "OK"
-            elif (device.Gpio.mntin.isOff()):
-                self.sendNotice("Mount is already off!", log='ERROR')
-                return 'ERROR'
             else:
                 self.sendNotice("Turning off mount power", log='INFO')
                 device.Gpio.mntout.turnOff()
