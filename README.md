@@ -165,16 +165,8 @@ of the rest of the controller.
 
 # Installation
 
-* Python modules?
-* Clone code (TBD)
-* Configure systemd (TBD)
-* Configure Apache
+Installation instructions reside in their own file: [INSTALL.md](INSTALL.md)
 
-```
-sudo apt-get install apach2
-sudo a2enmod cgi
-sudo systemctl restart apache2
-```
 
 # GPIO Notes
 
