@@ -43,6 +43,8 @@ class Gpio:
         Gpio.laser = self.Control(pin=16, name='laser')    # laserPowerOut
         Gpio.fob = self.Control(pin=26, name='fob')        # fobOutput
 
+        # Extend fob to include method to open for sure
+
 
     class Sensor:
         sensors = []    # array of all sensor instances (in order of creation for status printout)
@@ -171,6 +173,19 @@ class Gpio:
                 self.turnOff();
             else:
                 logging.error("WTF? toggle() called with step %".format(step))
+
+
+# Toggle fob up to three times if roof doesn't start moving
+def toggleThrice():
+    tries = [ "first", "second", "third" ]
+    for attempt in tries:
+        Gpio.fob.toggle()
+        for wait in range(4):  # Half a second
+            if (Gpio.open.isOff() and Gpio.close.isOff()):
+                loging.info("Roof motion detected on {} try".format(attempt))
+                break
+            time.sleep(0.1)
+    logging.error("Roof failed to start moving after {} try".format(tries[-1]))
 
 
 def printStatus():
