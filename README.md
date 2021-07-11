@@ -13,6 +13,8 @@ available unitl version 2.
 
 Testing insturctions can be found in the [test plan](doc/TestPlan.md) document.
 
+Version history can be found in [VERSION.md](VERSION.md).
+
 # Table of Contents
 
 1. [Theory of Operation](#theory-of-operation)
