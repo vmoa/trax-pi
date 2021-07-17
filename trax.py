@@ -26,7 +26,7 @@ import sse
 import flask
 app = flask.Flask(__name__)
 
-version = 'v1.0.2'      # T-Rax version
+version = 'v1.0.4'      # T-Rax version
 statusInterval = 60     # Seconds between status updates without input changes
 lockfile = 0            # Global so when we lock we keep it
 lockfilename = '/tmp/trax.lock'

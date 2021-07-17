@@ -11,6 +11,10 @@ can be opened via automation through tools such as [ACP](https://acpx.dc3.com/).
 Note that version 1 will simply replace the Arduino functionality.  The ASCOM Alpaca interface will not be
 available unitl version 2.
 
+Testing insturctions can be found in the [test plan](doc/TestPlan.md) document.
+
+Version history can be found in [VERSION.md](VERSION.md).
+
 # Table of Contents
 
 1. [Theory of Operation](#theory-of-operation)
@@ -163,16 +167,8 @@ of the rest of the controller.
 
 # Installation
 
-* Python modules?
-* Clone code (TBD)
-* Configure systemd (TBD)
-* Configure Apache
+Installation instructions reside in their own file: [INSTALL.md](INSTALL.md)
 
-```
-sudo apt-get install apach2
-sudo a2enmod cgi
-sudo systemctl restart apache2
-```
 
 # GPIO Notes
 

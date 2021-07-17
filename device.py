@@ -37,11 +37,11 @@ class Gpio:
         Gpio.open = self.Sensor(pin=23, name='open')      # roofOpen
         Gpio.close = self.Sensor(pin=24, name='close')    # roofClosed
 
-        Gpio.heart = self.Control(pin=13, name='heart')                       # heartLed
-        Gpio.mntout = self.Control(pin=6, name='mntout', active_high=False)   # mountPowerOut
-        Gpio.roofout = self.Control(pin=5, name='roofout', active_high=False) # roofPowerOut
-        Gpio.laser = self.Control(pin=16, name='laser')                       # laserPowerOut
-        Gpio.fob = self.Control(pin=26, name='fob')                           # fobOutput
+        Gpio.heart = self.Control(pin=13, name='heart')    # heartLed
+        Gpio.mntout = self.Control(pin=6, name='mntout')   # mountPowerOut
+        Gpio.roofout = self.Control(pin=5, name='roofout') # roofPowerOut
+        Gpio.laser = self.Control(pin=16, name='laser')    # laserPowerOut
+        Gpio.fob = self.Control(pin=26, name='fob')        # fobOutput
 
 
     class Sensor:
@@ -171,6 +171,20 @@ class Gpio:
                 self.turnOff();
             else:
                 logging.error("WTF? toggle() called with step %".format(step))
+
+
+# Toggle fob up to three times if roof doesn't start moving
+def toggleThrice():
+    tries = [ "first", "second", "third" ]
+    for attempt in tries:
+        Gpio.fob.toggle()
+        time.sleep(Gpio.fob.toggle_delay * 1.1)  # Wait for toggle to finish
+        for wait in range(20):  # Wait 2 seconds between attempts
+            if (Gpio.open.isOff() and Gpio.close.isOff()):
+                logging.info("Roof motion detected on {} try".format(attempt))
+                return
+            time.sleep(0.1)
+    logging.error("Roof failed to start moving after {} try".format(tries[-1]))
 
 
 def printStatus():
