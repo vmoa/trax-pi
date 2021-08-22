@@ -13,6 +13,11 @@
   * Disable graphical interface: System Options --> Boot / Auto Login --> Console
     * Optional, but recommended for production
 
+* Change system editor to vim; nano should die
+```
+sudo update-alternatives --set editor /usr/bin/vim.tiny
+```
+
 * Update system
 ```
 sudo apt-get update
@@ -62,9 +67,22 @@ sudo systemctl start trax.service
 sudo reboot
 ```
 
+# Appendix
+
 * Debugging commands if things go south
 ```
 systemctl status trax.service
 systemctl list-units | grep trax
 journalctl -u trax.service
+```
+
+* Add another user
+```
+NEWUSER=dlk
+sudo useradd -d /home/$NEWUSER -s /bin/bash -m $NEWUSER
+sudo usermod -G adm,gpio,sudo $NEWUSER
+sudo passwd $NEWUSER
+sudo -u $NEWUSER mkdir ~$NEWUSER/.ssh
+sudo -u $NEWUSER vi ~$NEWUSER/.ssh/authorized_keys
+sudo -u $NEWUSER chmod 700 ~$NEWUSER/.ssh
 ```

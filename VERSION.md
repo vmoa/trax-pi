@@ -14,4 +14,4 @@
 |         |            | add file locking to prevent multiple copiesA |
 |         |            | lots of documentation updates |
 |         |            | lots of schematic updates |
-| v.1.0   | 2021-04-25 | Released version 1.0; see git history for previous |
+| v.1.0   | 2021-04-25 | Released version 1.0; see `git log` for previous |
