@@ -2,6 +2,7 @@
 
 | Version | Date       | Notes |
 |---------|------------|-------|
+| v.1.0.5 | 2021-08-22 | In emergency override, checkPark toggles laser indefinitely, and updateBrowser reports actual park position |
 | v.1.0.4 | 2021-07-11 | Added toggleThrice() to make sure fob activates roof |
 |         |            | Updated installation instructions |
 | v.1.0.3 | 2021-07-07 | Removed pedantic power checks |
