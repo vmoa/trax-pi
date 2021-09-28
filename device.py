@@ -227,6 +227,20 @@ class Gpio:
             return(0)
 
 
+# Toggle fob up to three times if roof doesn't start moving
+def toggleThrice():
+    tries = [ "first", "second", "third" ]
+    for attempt in tries:
+        Gpio.fob.toggle()
+        time.sleep(Gpio.fob.toggle_delay * 1.1)  # Wait for toggle to finish
+        for wait in range(20):  # Wait 2 seconds between attempts
+            if (Gpio.open.isOff() and Gpio.close.isOff()):
+                logging.info("Roof motion detected on {} try".format(attempt))
+                return
+            time.sleep(0.1)
+    logging.error("Roof failed to start moving after {} try".format(tries[-1]))
+
+
 def printStatus():
     status = ''
     ### print(util.timestamp(), threading.get_ident(), end=' ')

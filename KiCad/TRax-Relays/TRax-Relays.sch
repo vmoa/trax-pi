@@ -5,13 +5,13 @@ $Descr A 11000 8500
 encoding utf-8
 Sheet 1 1
 Title "T-Rax Relays & Connector wiring"
-Date "2021-05-22"
-Rev "v1.2b"
+Date "2021-07-14"
+Rev "v1.3"
 Comp "Robert Ferguson Observatory"
 Comment1 "David Kensiski"
 Comment2 ""
 Comment3 ""
-Comment4 ""
+Comment4 "v1.3 fixes black/red wiring on input RJ11s"
 $EndDescr
 Text Notes 4500 1050 2    50   ~ 0
 Violet
@@ -385,7 +385,6 @@ Wire Wire Line
 	3550 1450 4550 1450
 Wire Wire Line
 	3650 1550 4550 1550
-NoConn ~ 4550 1650
 Wire Wire Line
 	3650 1550 3650 5600
 Wire Wire Line
@@ -401,16 +400,9 @@ Wire Wire Line
 Wire Wire Line
 	3150 1050 4550 1050
 Wire Wire Line
-	3050 1500 3050 1750
-Wire Wire Line
 	2000 5500 3050 5500
 Wire Wire Line
 	2000 1500 3050 1500
-Wire Wire Line
-	4550 1750 3050 1750
-Connection ~ 3050 1750
-Wire Wire Line
-	3050 1750 3050 2500
 Wire Wire Line
 	2000 2500 3050 2500
 Connection ~ 3050 2500
@@ -556,12 +548,10 @@ Text Notes 2200 6500 0    50   ~ 0
 yellow
 Text Notes 2200 6400 0    50   ~ 0
 red
-Text Notes 2200 5700 0    50   ~ 0
-black
 Text Notes 2200 4700 0    50   ~ 0
-black
+red*
 Text Notes 2200 3500 0    50   ~ 0
-black
+red*
 Text Notes 2200 2700 0    50   ~ 0
 blue
 Text Notes 2200 1600 0    50   ~ 0
@@ -569,13 +559,13 @@ violet
 Text Notes 2200 5600 0    50   ~ 0
 white
 Text Notes 2200 5500 0    50   ~ 0
-black
+red*
 Text Notes 2200 5400 0    50   ~ 0
 white
 Text Notes 2200 4600 0    50   ~ 0
 orange
 Text Notes 2200 4500 0    50   ~ 0
-black
+red*
 Text Notes 2200 4400 0    50   ~ 0
 yellow
 Text Notes 2200 3600 0    50   ~ 0
@@ -587,11 +577,11 @@ orange
 Text Notes 2200 2600 0    50   ~ 0
 blue
 Text Notes 2200 2500 0    50   ~ 0
-black
+red*
 Text Notes 2200 2400 0    50   ~ 0
 green
 Text Notes 2200 1500 0    50   ~ 0
-black
+red*
 Wire Wire Line
 	5400 3500 5400 5400
 Wire Wire Line
@@ -603,8 +593,23 @@ Wire Wire Line
 Connection ~ 5400 5400
 Wire Wire Line
 	5400 5400 5400 7100
+Wire Wire Line
+	4550 1650 3750 1650
+Wire Wire Line
+	3750 1750 3050 1750
+Connection ~ 3050 1750
+Wire Wire Line
+	3050 1750 3050 2500
+Wire Wire Line
+	3750 1650 3750 1750
+Wire Wire Line
+	3050 1500 3050 1750
 Wire Bus Line
 	7950 2450 10100 2450
 Wire Bus Line
 	5250 1150 5250 1850
+Text Notes 2200 5700 0    50   ~ 0
+black
+Text Notes 1050 7950 0    50   ~ 0
+* The red leads (+3.3v) on these jacks are wired to “black” pins.\n   I had wired them with black (ground) initially but that turned out to\n   be in error and it was easier to just change the color than rewire\n   the whole thing.
 $EndSCHEMATC

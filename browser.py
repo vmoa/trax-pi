@@ -42,17 +42,24 @@ class Browser:
         else:
             sse.sse.send(type='indicator', id='roof_position', status='midway')
 
-        parkState = device.Gpio.park.isParked()
-        if (parkState == device.park.PARKED_PROBABLY):
-            sse.sse.send(type='indicator', id='mount_position', status='parked_probably')
-        elif (parkState == device.park.PARKED):
-            sse.sse.send(type='indicator', id='mount_position', status='parked')
-        elif (parkState == device.park.UNPARKED):
-            sse.sse.send(type='indicator', id='mount_position', status='notparked')
-        elif (parkState == device.park.UNPARKED_PROBABLY):
-            sse.sse.send(type='indicator', id='mount_position', status='notparked_probably')
+        if (browser.emergencyOverride):
+            # Emergency override reports actual park sensor status
+            if (device.Gpio.park.isOn()):
+                sse.sse.send(type='indicator', id='mount_position', status='parked')
+            else:
+                sse.sse.send(type='indicator', id='mount_position', status='notparked')
         else:
-            sse.sse.send(type='indicator', id='mount_position', status='unknown')
+            parkState = device.Gpio.park.isParked()
+            if (parkState == device.park.PARKED_PROBABLY):
+                sse.sse.send(type='indicator', id='mount_position', status='parked_probably')
+            elif (parkState == device.park.PARKED):
+                sse.sse.send(type='indicator', id='mount_position', status='parked')
+            elif (parkState == device.park.UNPARKED):
+                sse.sse.send(type='indicator', id='mount_position', status='notparked')
+            elif (parkState == device.park.UNPARKED_PROBABLY):
+                sse.sse.send(type='indicator', id='mount_position', status='notparked_probably')
+            else:
+                sse.sse.send(type='indicator', id='mount_position', status='unknown')
 
         if (device.Gpio.bldg.isOn()):
             sse.sse.send(type='indicator', id='building_pwr', status='on')
@@ -94,7 +101,7 @@ class Browser:
                         if (device.Gpio.mntin.isOff()):
                             if (device.Gpio.wx.isOn()):
                                 self.sendNotice("Toggling fob (opening roof)", log='INFO')
-                                device.Gpio.fob.toggle()
+                                device.toggleThrice()
                                 return "OK"
                             else:
                                 self.sendNotice("Cannot open roof: Weather not OK", log='ERROR')
@@ -118,7 +125,7 @@ class Browser:
                 if (device.Gpio.park.checkParked() == device.park.PARKED):
                     if (device.Gpio.mntin.isOff()):
                         self.sendNotice("Toggling fob (closing roof)", log='INFO')
-                        device.Gpio.fob.toggle()
+                        device.toggleThrice()
                         return "OK"
                     else:
                         self.sendNotice("Cannot close roof: mount power is on", log='ERROR')
@@ -205,7 +212,16 @@ class Browser:
     def checkPark(self, app):
         """Actively check the mount park status"""
         logging.info("Click: Check Mount from {}".format(flask.request.remote_addr))
-        device.Gpio.park.checkParked()
+        if (self.emergencyOverride):
+            # Toggle laser on/off; let updateBrowser report status
+            if (device.Gpio.laser.isOff()):
+                self.sendNotice("EMERGENCY OVERRIDE: Turning on laser (pew, pew) indefinitely", log='INFO')
+                device.Gpio.laser.turnOn()
+            else:
+                self.sendNotice("EMERGENCY OVERRIDE: Turning off laser", log='INFO')
+                device.Gpio.laser.turnOff()
+        else:
+            device.Gpio.park.checkParked()
         return 'OK'
 
     def emergencyStop(self, app):
