@@ -122,11 +122,11 @@ class Gpio:
                 else:
                     return(park.UNPARKED_PROBABLY)
 
-        def checkRoofPosition(self):
+        def roofPosition(self):
             """Report roof position."""
-            if (Gpio.open.isOn):
+            if (Gpio.open.isOn()):
                 return roof.OPEN
-            elsif (Gpio.close.isOn):
+            elif (Gpio.close.isOn()):
                 return roof.CLOSED
             else:
                 return roof.MIDWAY
@@ -160,8 +160,9 @@ class Gpio:
 
             # Fob control magic
             if (name == 'fob'):
-                fob_wait = self.toggle_delay + 0.5    # Delay after toggle to check for roof motion
-                fob_tries = 3                         # How many times we try toggling before we give up
+                self.fob_wait = self.toggle_delay + 1.5    # Delay after toggle to check for roof motion
+                self.fob_tries = 3                         # How many times we try toggling before we give up
+                self.togglingFob = 0                       # Flag to track when we're toggling
 
 
         def turnOn(self):
@@ -184,6 +185,7 @@ class Gpio:
             return(self.device.value == 0)
 
         def toggle(self, step=0):
+            """Toggle the control ouput on then off"""
             if (step == 0):
                 logging.info("Toggle {}".format(self.name))
                 self.turnOn();
@@ -193,52 +195,44 @@ class Gpio:
             else:
                 logging.error("WTF? toggle() called with step %".format(step))
 
+
         # Fob has speical toggle magic to ensure the roof starts moving
         def toggleFob(self, step=0):
+            """Toggle fob and check for roof movement, retrying up to fob_tries times"""
             if (self.name != 'fob'):
-                logging.error("toggleFob() called for %".format(self.name)")
+                logging.error("toggleFob() called for {}".format(self.name))
                 return(-1)
-            if (step == 0 && self.togglingFob):
+            if (step == 0 and self.togglingFob):
                 logging.error("toggleFob() called while toggling already in progress")
                 return(-1)
             # If roof is middle just revert to toggle
-            if (step == 0 && Gpio.open.roofPosition == roof.MIDWAY):
+            if (step == 0 and Gpio.open.roofPosition() == roof.MIDWAY):
                 self.togglingFob = 0
                 self.toggle()
                 return(0)
 
             # If we're a scheduled callback check for status
-            if (step > 0 && Gpio.open.roofPosition == roof.MIDWAY):
+            if (step > 0 and Gpio.open.roofPosition() == roof.MIDWAY):
+                browser.browser.sendNotice("Roof is midway")
                 logging.info("toggleFob() detected roof movement")
                 self.togglingFob = 0
                 return(0)
 
             # Bail after x tries
-            if (step > self.fob_tries):
-                logging.error("toggleFob() failed to detect movement after % tries; giving up".format(step))
+            if (step >= self.fob_tries):
+                browser.browser.sendNotice("No roof movement; giving up")
+                logging.error("toggleFob() failed to detect movement after {} tries; giving up".format(step))
                 self.togglingFob = 0
                 return(1)
 
             # Toggle and schedule a callback to check for movement
+            if (step > 0):
+                browser.browser.sendNotice("Retrying fob ({}/{})".format(step+1, self.fob_tries))
             self.togglingFob = 1  # Should we use a timestamp so we can "expire" just in case?
             self.toggle()
-            logging.info("toggleFob(%) waiting %".format(self.step, self.fob_wait))
+            logging.info("toggleFob({}) waiting {} seconds".format(step, self.fob_wait))
             threading.Timer(self.fob_wait, self.toggleFob, [step+1]).start()
             return(0)
-
-
-# Toggle fob up to three times if roof doesn't start moving
-def toggleThrice():
-    tries = [ "first", "second", "third" ]
-    for attempt in tries:
-        Gpio.fob.toggle()
-        time.sleep(Gpio.fob.toggle_delay * 1.1)  # Wait for toggle to finish
-        for wait in range(20):  # Wait 2 seconds between attempts
-            if (Gpio.open.isOff() and Gpio.close.isOff()):
-                logging.info("Roof motion detected on {} try".format(attempt))
-                return
-            time.sleep(0.1)
-    logging.error("Roof failed to start moving after {} try".format(tries[-1]))
 
 
 def printStatus():
