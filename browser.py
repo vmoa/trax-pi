@@ -101,7 +101,7 @@ class Browser:
                         if (device.Gpio.mntin.isOff()):
                             if (device.Gpio.wx.isOn()):
                                 self.sendNotice("Toggling fob (opening roof)", log='INFO')
-                                device.toggleThrice()
+                                device.Gpio.fob.toggleFob()
                                 return "OK"
                             else:
                                 self.sendNotice("Cannot open roof: Weather not OK", log='ERROR')
@@ -125,7 +125,7 @@ class Browser:
                 if (device.Gpio.park.checkParked() == device.park.PARKED):
                     if (device.Gpio.mntin.isOff()):
                         self.sendNotice("Toggling fob (closing roof)", log='INFO')
-                        device.toggleThrice()
+                        device.Gpio.fob.toggleFob()
                         return "OK"
                     else:
                         self.sendNotice("Cannot close roof: mount power is on", log='ERROR')
