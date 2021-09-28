@@ -23,6 +23,12 @@ class park(enum.Enum):
     UNPARKED_PROBABLY = enum.auto()
     UNKNOWN = enum.auto()
 
+# Define an enum with possible roof positions
+class roof(enum.Enum):
+    OPEN = enum.auto()
+    CLOSED = enum.auto()
+    MIDWAY = enum.auto()
+
 
 class Gpio:
 
@@ -116,6 +122,15 @@ class Gpio:
                 else:
                     return(park.UNPARKED_PROBABLY)
 
+        def checkRoofPosition(self):
+            """Report roof position."""
+            if (Gpio.open.isOn):
+                return roof.OPEN
+            elsif (Gpio.close.isOn):
+                return roof.CLOSED
+            else:
+                return roof.MIDWAY
+
         # Default callbacks; override at instance creation or by setting <var>.device.when_[de]activated
         def activated(self):
             browser.browser.updateBrowser()
@@ -142,6 +157,12 @@ class Gpio:
             Gpio.Control.by_name[name] = self
             Gpio.Control.by_pin[pin] = self
             Gpio.Control.names.append(name)
+
+            # Fob control magic
+            if (name == 'fob'):
+                fob_wait = self.toggle_delay + 0.5    # Delay after toggle to check for roof motion
+                fob_tries = 3                         # How many times we try toggling before we give up
+
 
         def turnOn(self):
             self.device.on()
@@ -171,6 +192,39 @@ class Gpio:
                 self.turnOff();
             else:
                 logging.error("WTF? toggle() called with step %".format(step))
+
+        # Fob has speical toggle magic to ensure the roof starts moving
+        def toggleFob(self, step=0):
+            if (self.name != 'fob'):
+                logging.error("toggleFob() called for %".format(self.name)")
+                return(-1)
+            if (step == 0 && self.togglingFob):
+                logging.error("toggleFob() called while toggling already in progress")
+                return(-1)
+            # If roof is middle just revert to toggle
+            if (step == 0 && Gpio.open.roofPosition == roof.MIDWAY):
+                self.togglingFob = 0
+                self.toggle()
+                return(0)
+
+            # If we're a scheduled callback check for status
+            if (step > 0 && Gpio.open.roofPosition == roof.MIDWAY):
+                logging.info("toggleFob() detected roof movement")
+                self.togglingFob = 0
+                return(0)
+
+            # Bail after x tries
+            if (step > self.fob_tries):
+                logging.error("toggleFob() failed to detect movement after % tries; giving up".format(step))
+                self.togglingFob = 0
+                return(1)
+
+            # Toggle and schedule a callback to check for movement
+            self.togglingFob = 1  # Should we use a timestamp so we can "expire" just in case?
+            self.toggle()
+            logging.info("toggleFob(%) waiting %".format(self.step, self.fob_wait))
+            threading.Timer(self.fob_wait, self.toggleFob, [step+1]).start()
+            return(0)
 
 
 def printStatus():
