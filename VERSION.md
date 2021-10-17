@@ -2,6 +2,10 @@
 
 | Version | Date       | Notes |
 |---------|------------|-------|
+| v.1.0.7 | 2021-10-17 | Fixed toggleFob() roof logic |
+|         |            | Increased fob_wait to 3 seconds |
+|         |            | Better roof position reporting |
+|         |            | Added "confused" roof state |
 | v.1.0.6 | 2021-09-28 | Replace toggleThrice() with fob.toggleFob(), using callbacks instead of a timer loop |
 | v.1.0.5 | 2021-08-22 | In emergency override, checkPark toggles laser indefinitely, and updateBrowser reports actual park position |
 | v.1.0.4 | 2021-07-11 | Added toggleThrice() to make sure fob activates roof |
