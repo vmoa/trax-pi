@@ -28,6 +28,15 @@ class roof(enum.Enum):
     OPEN = enum.auto()
     CLOSED = enum.auto()
     MIDWAY = enum.auto()
+    CONFUSED = enum.auto()  # When reporting both open and closed
+
+# Define a dict of strings for roof position
+roofString = {
+    roof.OPEN     : 'OPEN',
+    roof.CLOSED   : 'CLOSED',
+    roof.MIDWAY   : 'MIDWAY',
+    roof.CONFUSED : 'CONFUSED',
+}
 
 
 class Gpio:
@@ -123,7 +132,10 @@ class Gpio:
                     return(park.UNPARKED_PROBABLY)
 
         def roofPosition(self):
-            """Report roof position."""
+            """Return roof position."""
+            if (Gpio.open.isOn() and Gpio.close.isOn()):
+                logging.error("Roof is CONFUSED; reporting both open and closed")
+                return roof.CONFUSED
             if (Gpio.open.isOn()):
                 return roof.OPEN
             elif (Gpio.close.isOn()):
@@ -135,10 +147,14 @@ class Gpio:
         def activated(self):
             browser.browser.updateBrowser()
             logging.info(printStatus())
+            if (self.name in ('open', 'close')):
+                browser.browser.sendNotice('Roof is {}'.format(roofString[self.roofPosition()]))
 
         def deactivated(self):
             browser.browser.updateBrowser()
             logging.info(printStatus())
+            if (self.name in ('open', 'close')):
+                browser.browser.sendNotice('Roof is {}'.format(roofString[self.roofPosition()]))
 
 
     class Control:
@@ -160,7 +176,7 @@ class Gpio:
 
             # Fob control magic
             if (name == 'fob'):
-                self.fob_wait = self.toggle_delay + 1.5    # Delay after toggle to check for roof motion
+                self.fob_wait = self.toggle_delay + 3.0    # Delay after toggle to check for roof motion
                 self.fob_tries = 3                         # How many times we try toggling before we give up
                 self.togglingFob = 0                       # Flag to track when we're toggling
 
@@ -194,7 +210,6 @@ class Gpio:
                 self.turnOff();
             else:
                 logging.error("WTF? toggle() called with step %".format(step))
-
 
         # Fob has speical toggle magic to ensure the roof starts moving
         def toggleFob(self, step=0):
