@@ -35,7 +35,9 @@ class Browser:
     # TODO: (maybe) optimize to only send updates for changes?
     def updateBrowser(self):
         """Decorate the indicators on the web browser"""
-        if (device.Gpio.close.isOn()):
+        if (device.Gpio.close.isOn() and device.Gpio.open.isOn()):
+            sse.sse.send(type='indicator', id='roof_position', status='confused')
+        elif (device.Gpio.close.isOn()):
             sse.sse.send(type='indicator', id='roof_position', status='closed')
         elif (device.Gpio.open.isOn()):
             sse.sse.send(type='indicator', id='roof_position', status='open')
@@ -97,7 +99,7 @@ class Browser:
         if (device.Gpio.close.isOn()):
             if (device.Gpio.bldg.isOn()):
                 if (device.Gpio.roofin.isOn()):
-                    if (device.Gpio.park.checkParked()):
+                    if (device.Gpio.park.checkParked() == device.park.PARKED):
                         if (device.Gpio.mntin.isOff()):
                             if (device.Gpio.wx.isOn()):
                                 self.sendNotice("Toggling fob (opening roof)", log='INFO')
