@@ -51,6 +51,10 @@ function update_indicator(e) {
         element.style.backgroundColor = red;
         element.style.color = yellow;
         element.innerHTML = 'CLOSED';
+    } else if (o.id == "roof_position" && o.status == 'confused') {
+        element.style.backgroundColor = light_red;
+        element.style.color = yellow;
+        element.innerHTML = 'CONFUSED';
 
     } else if (o.id == "mount_position" && o.status == 'parked') {
         element.style.backgroundColor = green;
