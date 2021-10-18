@@ -5,13 +5,13 @@ $Descr A 11000 8500
 encoding utf-8
 Sheet 2 3
 Title "T-Rax Relays & Connector wiring"
-Date "2021-09-19"
-Rev "v1.5"
+Date "2021-10-17"
+Rev "v1.6"
 Comp "Robert Ferguson Observatory"
 Comment1 "David Kensiski"
-Comment2 "v1.3 fixe black/red wiring on input RJ11s"
-Comment3 "v1.4 add park sensor isolator (never implemented)"
-Comment4 "v1.5 remove park isolator (see detector module); replace fob relay with isolator"
+Comment2 "v1.4 add park sensor isolator (never implemented)"
+Comment3 "v1.5 remove park isolator (see detector module); replace fob relay with isolator"
+Comment4 "v1.6 merge all schematics into one doc; add accessory modules"
 $EndDescr
 Text Notes 5450 1050 2    50   ~ 0
 Violet

@@ -6,11 +6,11 @@ encoding utf-8
 Sheet 3 3
 Title "TRax Modules"
 Date "2021-09-19"
-Rev "v1.1"
+Rev "v1.6"
 Comp "Robert Ferguson Observatory"
 Comment1 "David Kensiski"
-Comment2 ""
-Comment3 ""
+Comment2 "v1.4 add park sensor isolator (never implemented)"
+Comment3 "v1.5 remove park isolator (see detector module); replace fob relay with isolator"
 Comment4 "v1.1 adds detector inverter/isolator; add fob module"
 $EndDescr
 $Comp
