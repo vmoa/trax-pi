@@ -3,15 +3,15 @@ EELAYER 30 0
 EELAYER END
 $Descr A 11000 8500
 encoding utf-8
-Sheet 1 1
+Sheet 2 3
 Title "T-Rax Relays & Connector wiring"
-Date "2021-07-17"
-Rev "v1.4"
+Date "2021-09-19"
+Rev "v1.5"
 Comp "Robert Ferguson Observatory"
-Comment1 "Autor: David Kensiski"
-Comment2 ""
-Comment3 "v1.3 fixes black/red wiring on input RJ11s"
-Comment4 "v1.4 adds park sensor isolator"
+Comment1 "David Kensiski"
+Comment2 "v1.3 fixe black/red wiring on input RJ11s"
+Comment3 "v1.4 add park sensor isolator (never implemented)"
+Comment4 "v1.5 remove park isolator (see detector module); replace fob relay with isolator"
 $EndDescr
 Text Notes 5450 1050 2    50   ~ 0
 Violet
@@ -54,10 +54,10 @@ Orange
 Text Notes 8800 2600 3    50   ~ 0
 Green
 $Comp
-L Connector:6P6C J3
+L Connector:6P6C J8
 U 1 1 609A2420
 P 1600 3600
-F 0 "J3" H 1200 3600 50  0000 C CNN
+F 0 "J8" H 1200 3600 50  0000 C CNN
 F 1 "MountPower" H 1657 4076 50  0000 C CNN
 F 2 "" V 1600 3625 50  0001 C CNN
 F 3 "~" V 1600 3625 50  0001 C CNN
@@ -65,10 +65,10 @@ F 3 "~" V 1600 3625 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector:6P6C J2
+L Connector:6P6C J7
 U 1 1 609A2BC1
 P 1600 2600
-F 0 "J2" H 1200 2600 50  0000 C CNN
+F 0 "J7" H 1200 2600 50  0000 C CNN
 F 1 "RoofPower" H 1657 3076 50  0000 C CNN
 F 2 "" V 1600 2625 50  0001 C CNN
 F 3 "~" V 1600 2625 50  0001 C CNN
@@ -76,10 +76,10 @@ F 3 "~" V 1600 2625 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector:6P6C J4
+L Connector:6P6C J9
 U 1 1 609A37E0
 P 1600 4600
-F 0 "J4" H 1200 4600 50  0000 C CNN
+F 0 "J9" H 1200 4600 50  0000 C CNN
 F 1 "Open/Close" H 1657 5076 50  0000 C CNN
 F 2 "" V 1600 4625 50  0001 C CNN
 F 3 "~" V 1600 4625 50  0001 C CNN
@@ -87,59 +87,15 @@ F 3 "~" V 1600 4625 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector:6P6C J5
+L Connector:6P6C J10
 U 1 1 609A462B
 P 1600 5600
-F 0 "J5" H 1200 5600 50  0000 C CNN
+F 0 "J10" H 1200 5600 50  0000 C CNN
 F 1 "Parked" H 1657 6076 50  0000 C CNN
 F 2 "" V 1600 5625 50  0001 C CNN
 F 3 "~" V 1600 5625 50  0001 C CNN
 	1    1600 5600
 	1    0    0    -1  
-$EndComp
-$Comp
-L TRax-Relays-rescue:Relay_Module-myLib K1
-U 1 1 609A763A
-P 7350 2950
-F 0 "K1" H 7350 3225 50  0000 C CNN
-F 1 "Roof" H 7350 3134 50  0000 C CNN
-F 2 "" H 7350 2950 50  0001 C CNN
-F 3 "" H 7350 2950 50  0001 C CNN
-	1    7350 2950
-	-1   0    0    -1  
-$EndComp
-$Comp
-L TRax-Relays-rescue:Relay_Module-myLib K2
-U 1 1 609A9B89
-P 7350 3750
-F 0 "K2" H 7350 4025 50  0000 C CNN
-F 1 "Mount" H 7350 3934 50  0000 C CNN
-F 2 "" H 7350 3750 50  0001 C CNN
-F 3 "" H 7350 3750 50  0001 C CNN
-	1    7350 3750
-	-1   0    0    -1  
-$EndComp
-$Comp
-L TRax-Relays-rescue:Relay_Module-myLib K3
-U 1 1 609AA6A6
-P 7350 4550
-F 0 "K3" H 7350 4825 50  0000 C CNN
-F 1 "Fob" H 7350 4734 50  0000 C CNN
-F 2 "" H 7350 4550 50  0001 C CNN
-F 3 "" H 7350 4550 50  0001 C CNN
-	1    7350 4550
-	-1   0    0    -1  
-$EndComp
-$Comp
-L TRax-Relays-rescue:Relay_Module-myLib K4
-U 1 1 609AAFF2
-P 7350 5350
-F 0 "K4" H 7350 5625 50  0000 C CNN
-F 1 "Laser" H 7350 5534 50  0000 C CNN
-F 2 "" H 7350 5350 50  0001 C CNN
-F 3 "" H 7350 5350 50  0001 C CNN
-	1    7350 5350
-	-1   0    0    -1  
 $EndComp
 Text Notes 1050 7550 0    50   ~ 0
 RJ Color Code: Telco (Cat5)\n5. Yellow (Orange/White)\n4. Green  (White/Blue)\n3. Red    (Blue/White)\n2. Black  (White/Orange
@@ -172,30 +128,16 @@ Wire Wire Line
 	8200 5500 7800 5500
 Connection ~ 8200 3100
 Wire Wire Line
-	7800 4500 8100 4500
-Connection ~ 8100 4500
-Wire Wire Line
-	8100 4500 8100 5300
-Wire Wire Line
-	7800 4700 8200 4700
-Connection ~ 8200 4700
-Wire Wire Line
-	8200 4700 8200 5500
-Wire Wire Line
 	7800 3700 8100 3700
 Connection ~ 8100 3700
 Wire Wire Line
-	8100 3700 8100 4500
-Wire Wire Line
 	7800 3900 8200 3900
 Connection ~ 8200 3900
-Wire Wire Line
-	8200 3900 8200 4700
 $Comp
-L power:+12V #PWR0101
+L power:+12V #PWR0134
 U 1 1 60A1C6F9
 P 6350 6300
-F 0 "#PWR0101" H 6350 6150 50  0001 C CNN
+F 0 "#PWR0134" H 6350 6150 50  0001 C CNN
 F 1 "+12V" H 6250 6350 50  0000 C CNN
 F 2 "" H 6350 6300 50  0001 C CNN
 F 3 "" H 6350 6300 50  0001 C CNN
@@ -203,10 +145,10 @@ F 3 "" H 6350 6300 50  0001 C CNN
 	-1   0    0    1   
 $EndComp
 $Comp
-L power:GND #PWR0102
+L power:GND #PWR0135
 U 1 1 60A26175
 P 6250 6300
-F 0 "#PWR0102" H 6250 6050 50  0001 C CNN
+F 0 "#PWR0135" H 6250 6050 50  0001 C CNN
 F 1 "GND" H 6100 6250 50  0000 C CNN
 F 2 "" H 6250 6300 50  0001 C CNN
 F 3 "" H 6250 6300 50  0001 C CNN
@@ -215,23 +157,18 @@ F 3 "" H 6250 6300 50  0001 C CNN
 $EndComp
 NoConn ~ 6900 2900
 NoConn ~ 6900 3700
-NoConn ~ 6900 4500
 NoConn ~ 6900 5300
 NoConn ~ 2000 1650
 NoConn ~ 2000 1350
 Wire Wire Line
 	6900 3800 6800 3800
 Wire Wire Line
-	6900 4600 6800 4600
-Wire Wire Line
 	2000 5400 4150 5400
-Wire Wire Line
-	6900 4700 6550 4700
 $Comp
-L Connector:6P6C J6
+L Connector:6P6C J11
 U 1 1 609A546C
 P 1600 6600
-F 0 "J6" H 1200 6600 50  0000 C CNN
+F 0 "J11" H 1200 6600 50  0000 C CNN
 F 1 "Fob" H 1657 7076 50  0000 C CNN
 F 2 "" V 1600 6625 50  0001 C CNN
 F 3 "~" V 1600 6625 50  0001 C CNN
@@ -248,14 +185,14 @@ Wire Wire Line
 	6800 3000 6900 3000
 Connection ~ 6800 3800
 Wire Wire Line
-	6800 3800 6800 4600
+	6800 3800 6800 4500
 Wire Wire Line
 	2000 6500 4050 6500
 $Comp
-L Connector:Conn_01x07_Male J10
+L Connector:Conn_01x07_Male J15
 U 1 1 60B04D3A
 P 5850 3300
-F 0 "J10" H 5900 2800 50  0000 C CNN
+F 0 "J15" H 5900 2800 50  0000 C CNN
 F 1 "Relays" H 5950 2900 50  0000 C CNN
 F 2 "" H 5850 3300 50  0001 C CNN
 F 3 "~" H 5850 3300 50  0001 C CNN
@@ -263,10 +200,10 @@ F 3 "~" H 5850 3300 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector:Conn_01x07_Male J8
+L Connector:Conn_01x07_Male J13
 U 1 1 60AFF249
 P 5700 3300
-F 0 "J8" H 5850 2800 50  0000 R CNN
+F 0 "J13" H 5850 2800 50  0000 R CNN
 F 1 "Relays" H 5950 2900 50  0000 R CNN
 F 2 "" H 5700 3300 50  0001 C CNN
 F 3 "~" H 5700 3300 50  0001 C CNN
@@ -286,8 +223,6 @@ Wire Wire Line
 	6650 3900 6900 3900
 Wire Wire Line
 	6050 3300 6550 3300
-Wire Wire Line
-	6550 3300 6550 4700
 Wire Wire Line
 	3950 3100 3950 2400
 Wire Wire Line
@@ -336,10 +271,10 @@ Wire Notes Line
 Text Notes 6550 2500 2    79   ~ 0
 Relay Board
 $Comp
-L Connector:Conn_01x08_Male J7
+L Connector:Conn_01x08_Male J12
 U 1 1 6105C513
 P 5700 1350
-F 0 "J7" H 5850 750 50  0000 R CNN
+F 0 "J12" H 5850 750 50  0000 R CNN
 F 1 "Inputs" H 6000 850 50  0000 R CNN
 F 2 "" H 5700 1350 50  0001 C CNN
 F 3 "~" H 5700 1350 50  0001 C CNN
@@ -396,11 +331,11 @@ Entry Wire Line
 Entry Wire Line
 	6200 1750 6100 1650
 $Comp
-L Connector_Generic:Conn_01x08 J9
+L Connector_Generic:Conn_01x08 J14
 U 1 1 611FE672
 P 5850 1350
-F 0 "J9" H 5768 1775 50  0001 C CNN
-F 1 "Conn_01x08" H 5768 1776 50  0001 C CNN
+F 0 "J14" H 5850 750 50  0000 C CNN
+F 1 "Inputs" H 5800 850 50  0000 C CNN
 F 2 "" H 5850 1350 50  0001 C CNN
 F 3 "~" H 5850 1350 50  0001 C CNN
 	1    5850 1350
@@ -431,8 +366,6 @@ Wire Wire Line
 Wire Wire Line
 	9100 2550 9100 5400
 Wire Wire Line
-	9000 2550 9000 4600
-Wire Wire Line
 	8800 2550 8800 3000
 Wire Wire Line
 	8900 2550 8900 3800
@@ -456,8 +389,6 @@ Wire Wire Line
 	7800 3000 8800 3000
 Wire Wire Line
 	7800 3800 8900 3800
-Wire Wire Line
-	7800 4600 9000 4600
 Wire Wire Line
 	7800 5400 9100 5400
 Wire Wire Line
@@ -565,17 +496,6 @@ Wire Wire Line
 	3250 1150 5500 1150
 Wire Wire Line
 	3150 1050 5500 1050
-$Comp
-L Isolator:4N25 U1
-U 1 1 60FF968C
-P 4650 2050
-F 0 "U1" H 4500 2250 50  0000 C CNN
-F 1 "4N25" H 4750 2250 50  0000 C CNN
-F 2 "Package_DIP:DIP-6_W7.62mm" H 4450 1850 50  0001 L CIN
-F 3 "https://www.vishay.com/docs/83725/4n25.pdf" H 4650 2050 50  0001 L CNN
-	1    4650 2050
-	1    0    0    -1  
-$EndComp
 Text Notes 2250 7550 0    50   ~ 0
 Park Wiring\n5: +12v\n4: D0 digital out @5v\n3: A0 analog out @5v\n2: Ground
 Wire Notes Line
@@ -585,34 +505,12 @@ Wire Notes Line
 Wire Wire Line
 	2000 5500 3650 5500
 Wire Wire Line
-	3650 1950 3650 5500
-Connection ~ 4350 3600
-Wire Wire Line
-	4350 2150 4350 3600
-Wire Wire Line
-	3650 1950 3850 1950
-Wire Wire Line
-	4950 2150 5150 2150
-Wire Wire Line
-	5150 2150 5150 1550
-Wire Wire Line
-	5150 1550 5500 1550
-Wire Wire Line
 	2000 5700 4350 5700
-Wire Wire Line
-	5050 1650 5050 2050
-Wire Wire Line
-	5050 2050 4950 2050
-Connection ~ 5050 1650
-Wire Wire Line
-	5050 1650 5500 1650
-Text Notes 4450 2400 0    50   ~ 0
-Park sensor\nisolator
 $Comp
-L Connector:6P6C J1
+L Connector:6P6C J4
 U 1 1 609A144B
 P 1600 1550
-F 0 "J1" H 1200 1550 50  0000 C CNN
+F 0 "J4" H 1200 1550 50  0000 C CNN
 F 1 "WX" H 1657 2026 50  0000 C CNN
 F 2 "" V 1600 1575 50  0001 C CNN
 F 3 "~" V 1600 1575 50  0001 C CNN
@@ -626,23 +524,102 @@ Wire Wire Line
 Connection ~ 3050 1650
 Wire Wire Line
 	3050 1650 3050 2500
-Wire Wire Line
-	3050 1650 5050 1650
-NoConn ~ 2000 5600
 $Comp
-L Device:R R1
-U 1 1 610AAC18
-P 4000 1950
-F 0 "R1" V 3900 1850 50  0000 C CNN
-F 1 "1K" V 3900 2050 50  0000 C CNN
-F 2 "" V 3930 1950 50  0001 C CNN
-F 3 "~" H 4000 1950 50  0001 C CNN
-	1    4000 1950
+L Device:R R201
+U 1 1 61484A1B
+P 7800 4700
+F 0 "R201" V 7900 4700 50  0000 C CNN
+F 1 "1K" V 7684 4700 50  0000 C CNN
+F 2 "" V 7730 4700 50  0001 C CNN
+F 3 "~" H 7800 4700 50  0001 C CNN
+	1    7800 4700
 	0    1    1    0   
 $EndComp
+$Comp
+L Isolator:4N35 U8
+U 1 1 614862EC
+P 7350 4600
+F 0 "U8" H 7500 4800 50  0000 C CNN
+F 1 "4N35" H 7250 4800 50  0000 C CNN
+F 2 "Package_DIP:DIP-6_W7.62mm" H 7150 4400 50  0001 L CIN
+F 3 "https://www.vishay.com/docs/81181/4n35.pdf" H 7350 4600 50  0001 L CNN
+	1    7350 4600
+	-1   0    0    1   
+$EndComp
 Wire Wire Line
-	4150 1950 4350 1950
-NoConn ~ 4950 1950
+	8100 3700 8100 5300
+Wire Wire Line
+	8200 3900 8200 4500
+Wire Wire Line
+	9000 2550 9000 4700
+Connection ~ 8200 4500
+Wire Wire Line
+	8200 4500 8200 5500
+Wire Wire Line
+	6550 3300 6550 4600
+NoConn ~ 7050 4700
+$Comp
+L relay_module:Relay_Module-myLib K1
+U 1 1 614842C8
+P 7350 2950
+F 0 "K1" H 7350 3225 50  0000 C CNN
+F 1 "Roof" H 7350 3134 50  0000 C CNN
+F 2 "" H 7350 2950 50  0001 C CNN
+F 3 "" H 7350 2950 50  0001 C CNN
+	1    7350 2950
+	-1   0    0    -1  
+$EndComp
+$Comp
+L relay_module:Relay_Module-myLib K2
+U 1 1 61499AEE
+P 7350 3750
+F 0 "K2" H 7350 4025 50  0000 C CNN
+F 1 "Mount" H 7350 3934 50  0000 C CNN
+F 2 "" H 7350 3750 50  0001 C CNN
+F 3 "" H 7350 3750 50  0001 C CNN
+	1    7350 3750
+	-1   0    0    -1  
+$EndComp
+$Comp
+L relay_module:Relay_Module-myLib K3
+U 1 1 614C0E5F
+P 7350 5350
+F 0 "K3" H 7350 5625 50  0000 C CNN
+F 1 "Laser" H 7350 5550 50  0000 C CNN
+F 2 "" H 7350 5350 50  0001 C CNN
+F 3 "" H 7350 5350 50  0001 C CNN
+	1    7350 5350
+	-1   0    0    -1  
+$EndComp
+Wire Wire Line
+	7950 4700 9000 4700
+Wire Wire Line
+	8200 4500 7650 4500
+Wire Wire Line
+	6550 4600 7050 4600
+Wire Wire Line
+	6800 4500 7050 4500
+Wire Notes Line
+	7000 4850 7950 4850
+Text Notes 7300 4350 0    50   ~ 0
+FOB
+Wire Notes Line
+	7000 4400 7950 4400
+Wire Notes Line
+	7000 4400 7000 4850
+Wire Notes Line
+	7950 4400 7950 4850
+Wire Wire Line
+	3650 1550 5500 1550
+Wire Wire Line
+	3650 1550 3650 5500
+Wire Wire Line
+	3050 1650 5500 1650
+Wire Wire Line
+	3050 5600 3050 4700
+Connection ~ 3050 4700
+Wire Wire Line
+	2000 5600 3050 5600
 Wire Bus Line
 	8900 2450 10500 2450
 Wire Bus Line
