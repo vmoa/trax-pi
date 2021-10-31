@@ -5,13 +5,13 @@ $Descr A 11000 8500
 encoding utf-8
 Sheet 2 3
 Title "T-Rax Relays & Connector wiring"
-Date "2021-10-17"
-Rev "v1.6"
+Date "2021-10-31"
+Rev "v1.7"
 Comp "Robert Ferguson Observatory"
 Comment1 "David Kensiski"
-Comment2 "v1.4 add park sensor isolator (never implemented)"
-Comment3 "v1.5 remove park isolator (see detector module); replace fob relay with isolator"
-Comment4 "v1.6 merge all schematics into one doc; add accessory modules"
+Comment2 "v1.5 remove park isolator (see detector module); replace fob relay with isolator"
+Comment3 "v1.6 merge all schematics into one doc; add accessory modules"
+Comment4 "v1.7 direct wire fob isolator to fob trigger "
 $EndDescr
 Text Notes 5450 1050 2    50   ~ 0
 Violet
@@ -183,11 +183,6 @@ Wire Wire Line
 	2000 3400 3950 3400
 Wire Wire Line
 	6800 3000 6900 3000
-Connection ~ 6800 3800
-Wire Wire Line
-	6800 3800 6800 4500
-Wire Wire Line
-	2000 6500 4050 6500
 $Comp
 L Connector:Conn_01x07_Male J15
 U 1 1 60B04D3A
@@ -227,13 +222,6 @@ Wire Wire Line
 	3950 3100 3950 2400
 Wire Wire Line
 	3950 3200 3950 3400
-Wire Wire Line
-	4050 3300 4050 6500
-Wire Wire Line
-	3850 6600 3850 3700
-Connection ~ 3850 3700
-Wire Wire Line
-	2000 6600 3850 6600
 Wire Wire Line
 	2000 3700 3850 3700
 Wire Wire Line
@@ -555,8 +543,6 @@ Wire Wire Line
 Connection ~ 8200 4500
 Wire Wire Line
 	8200 4500 8200 5500
-Wire Wire Line
-	6550 3300 6550 4600
 NoConn ~ 7050 4700
 $Comp
 L relay_module:Relay_Module-myLib K1
@@ -595,10 +581,6 @@ Wire Wire Line
 	7950 4700 9000 4700
 Wire Wire Line
 	8200 4500 7650 4500
-Wire Wire Line
-	6550 4600 7050 4600
-Wire Wire Line
-	6800 4500 7050 4500
 Wire Notes Line
 	7000 4850 7950 4850
 Text Notes 7300 4350 0    50   ~ 0
@@ -620,8 +602,56 @@ Wire Wire Line
 Connection ~ 3050 4700
 Wire Wire Line
 	2000 5600 3050 5600
+$Comp
+L Connector:Conn_01x02_Male J19
+U 1 1 6180CA74
+P 5700 4500
+F 0 "J19" H 5850 4200 50  0000 R CNN
+F 1 "Fob" H 5850 4300 50  0000 R CNN
+F 2 "" H 5700 4500 50  0001 C CNN
+F 3 "~" H 5700 4500 50  0001 C CNN
+	1    5700 4500
+	-1   0    0    -1  
+$EndComp
+$Comp
+L Connector:Conn_01x02_Male J20
+U 1 1 6180D475
+P 5850 4500
+F 0 "J20" H 5900 4200 50  0000 C CNN
+F 1 "Fob" H 5900 4300 50  0000 C CNN
+F 2 "" H 5850 4500 50  0001 C CNN
+F 3 "~" H 5850 4500 50  0001 C CNN
+	1    5850 4500
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	6050 4500 7050 4500
+Wire Wire Line
+	6050 4600 7050 4600
+NoConn ~ 6550 3300
+Wire Wire Line
+	4950 6500 4950 4500
+Wire Wire Line
+	4950 4500 5500 4500
+Wire Wire Line
+	5050 6600 5050 4600
+Wire Wire Line
+	5050 4600 5500 4600
+Wire Wire Line
+	2000 6600 5050 6600
+Wire Wire Line
+	2000 6500 4950 6500
+NoConn ~ 4050 3300
+Text Notes 6800 4600 2    50   ~ 0
+Red
+Text Notes 6850 4500 2    50   ~ 0
+Black
 Wire Bus Line
 	8900 2450 10500 2450
 Wire Bus Line
 	6200 1150 6200 1850
+Text Notes 5250 4500 0    50   ~ 0
+Yellow
+Text Notes 5300 4600 0    50   ~ 0
+Blue
 $EndSCHEMATC

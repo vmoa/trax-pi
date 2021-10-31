@@ -5,13 +5,13 @@ $Descr A 11000 8500
 encoding utf-8
 Sheet 1 3
 Title "T-Rax Control Board"
-Date "2021-05-06"
-Rev "v1.6"
+Date "2021-10-31"
+Rev "v1.7"
 Comp "Robert Ferguson Observatory"
 Comment1 "David Kensiski"
-Comment2 "v1.4 add park sensor isolator (never implemented)"
-Comment3 "v1.5 remove park isolator (see detector module); replace fob relay with isolator"
-Comment4 "v1.6 merge all schematics into one doc; add accessory modules"
+Comment2 "v1.5 remove park isolator (see detector module); replace fob relay with isolator"
+Comment3 "v1.6 merge all schematics into one doc; add accessory modules"
+Comment4 "v1.7 direct wire fob isolator to fob trigger "
 $EndDescr
 $Comp
 L Isolator:4N25 U1

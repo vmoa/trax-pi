@@ -5,13 +5,13 @@ $Descr A 11000 8500
 encoding utf-8
 Sheet 3 3
 Title "TRax Modules"
-Date "2021-09-19"
-Rev "v1.6"
+Date "2021-10-31"
+Rev "v1.7"
 Comp "Robert Ferguson Observatory"
 Comment1 "David Kensiski"
-Comment2 "v1.4 add park sensor isolator (never implemented)"
-Comment3 "v1.5 remove park isolator (see detector module); replace fob relay with isolator"
-Comment4 "v1.1 adds detector inverter/isolator; add fob module"
+Comment2 "v1.5 remove park isolator (see detector module); replace fob relay with isolator"
+Comment3 "v1.6 merge all schematics into one doc; add accessory modules"
+Comment4 "v1.7 direct wire fob isolator to fob trigger "
 $EndDescr
 $Comp
 L Regulator_Linear:LM1084-ADJ U9
