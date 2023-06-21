@@ -24,6 +24,8 @@ Version history can be found in [VERSION.md](VERSION.md).
 1. [Installation](#installation)
 1. [GPIO Notes](#gpio-notes)
 
+![T-Rax](doc/T-Rax_v1.6.jpg)
+
 
 # Theory of Operation
 
@@ -53,6 +55,8 @@ so the server can pro-actively update the browser.  Browser javascript listens o
 display appropriately.  Browser buttons trigger async HTTP calls to varioius
 trax URIs that perform an appropriate action, which in turn triggers an SSE response.
 
+![screenshot](doc/screenshot.png)
+
 Breaking this down, the connection flow is as follows:
 
 1. User connects to http://trax and clicks the "Launch" button
@@ -72,6 +76,8 @@ browser.  It then reschedules itself to run again one second later.  This thread
 page to act as a hardbeat to confirm the server/browser SSE channel is active
 
 # Software Design
+
+* TODO: Flesh this out
 
 * Hardware Interrupt driven
 * Each input has a callback
