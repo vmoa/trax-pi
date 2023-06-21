@@ -217,11 +217,13 @@ class Browser:
         if (self.emergencyOverride):
             # Toggle laser on/off; let updateBrowser report status
             if (device.Gpio.laser.isOff()):
-                self.sendNotice("EMERGENCY OVERRIDE: Turning on laser (pew, pew) indefinitely", log='INFO')
+                self.sendNotice("EMERGENCY OVERRIDE: Turning on laser (pew, pew) for a while", log='INFO')
                 device.Gpio.laser.turnOn()
+                device.Gpio.laser.timeOut = int(time.time()) + device.Gpio.laser.defaultTimeOut
             else:
                 self.sendNotice("EMERGENCY OVERRIDE: Turning off laser", log='INFO')
                 device.Gpio.laser.turnOff()
+                device.Gpio.laser.timeOut = 0
         else:
             device.Gpio.park.checkParked()
         return 'OK'

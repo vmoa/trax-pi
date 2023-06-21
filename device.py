@@ -180,6 +180,10 @@ class Gpio:
                 self.fob_tries = 3                         # How many times we try toggling before we give up
                 self.togglingFob = 0                       # Flag to track when we're toggling
 
+            # Laser timeOut for emergency override
+            if (name == 'laser'):
+                self.laser.timeOut = 0                      # Turn off the laser after this time()
+                self.laser.defaultTimeOut = 120             # Seconds to leave the laser on before timing out
 
         def turnOn(self):
             self.device.on()
@@ -280,6 +284,12 @@ def beatHeart(output=0, step=0):
     else:
         logging.error("WTF? beatHeart() called with step %".format(step))
 
+def timeOutLaser(laser):
+    '''Time out and turn off the laser.'''
+    browser.browser.sendNotice("Laser timeout")
+    logging.info("Timing out laser")
+    laser.timeOut = 0
+    laser.off()
 
 def perSecond():
     """Callback that runs every second to perform housekeeping duties"""
@@ -291,5 +301,7 @@ def perSecond():
         browser.browser.updateBrowser()
     if (int(datetime.datetime.now().second) % statusInterval == 0):
         logging.info(printStatus())
+    if (Gpio.laser.timeOut > 0 and int(time.time()) > Gpio.laser.timeOut):
+        timeOutLaser(Gpio.laser)
     threading.Timer(1.0, perSecond).start()  # Redispatch self
 
