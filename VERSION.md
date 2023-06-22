@@ -2,6 +2,7 @@
 
 | Version | Date       | Notes |
 |---------|------------|-------|
+| v.1.0.8 | 2023-06-21 | Implement laser timeout for Emergency Override |
 | v.1.0.7 | 2021-10-17 | Fixed toggleFob() roof logic |
 |         |            | Increased fob_wait to 3 seconds |
 |         |            | Better roof position reporting |

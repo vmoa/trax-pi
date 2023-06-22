@@ -182,8 +182,8 @@ class Gpio:
 
             # Laser timeOut for emergency override
             if (name == 'laser'):
-                self.laser.timeOut = 0                      # Turn off the laser after this time()
-                self.laser.defaultTimeOut = 120             # Seconds to leave the laser on before timing out
+                self.timeOut = 0                      # Turn off the laser after this time()
+                self.defaultTimeOut = 120             # Seconds to leave the laser on before timing out
 
         def turnOn(self):
             self.device.on()
@@ -289,7 +289,7 @@ def timeOutLaser(laser):
     browser.browser.sendNotice("Laser timeout")
     logging.info("Timing out laser")
     laser.timeOut = 0
-    laser.off()
+    laser.turnOff()
 
 def perSecond():
     """Callback that runs every second to perform housekeeping duties"""
@@ -301,6 +301,7 @@ def perSecond():
         browser.browser.updateBrowser()
     if (int(datetime.datetime.now().second) % statusInterval == 0):
         logging.info(printStatus())
+    #if (int(datetime.datetime.now().second) % statusInterval == 0):
     if (Gpio.laser.timeOut > 0 and int(time.time()) > Gpio.laser.timeOut):
         timeOutLaser(Gpio.laser)
     threading.Timer(1.0, perSecond).start()  # Redispatch self
