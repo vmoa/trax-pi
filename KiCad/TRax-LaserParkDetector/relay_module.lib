@@ -1,0 +1,22 @@
+EESchema-LIBRARY Version 2.4
+#encoding utf-8
+#
+# Relay_Module-myLib
+#
+DEF Relay_Module-myLib K 0 40 Y Y 1 F N
+F0 "K" 300 150 50 H V C CNN
+F1 "Relay_Module-myLib" -100 150 50 H V C CNN
+F2 "" 0 0 50 H I C CNN
+F3 "" 0 0 50 H I C CNN
+DRAW
+S 350 -200 -350 100 0 1 0 f
+X Com ~ 450 -50 100 L 50 39 1 1 P
+X Gnd ~ -450 -150 100 R 50 39 1 1 P
+X In ~ -450 -50 100 R 50 39 1 1 P
+X NC ~ 450 50 100 L 50 39 1 1 P
+X NO ~ 450 -150 100 L 50 39 1 1 P
+X VCC ~ -450 50 100 R 50 39 1 1 P
+ENDDRAW
+ENDDEF
+#
+#End Library
