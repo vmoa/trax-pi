@@ -200,6 +200,26 @@ As of this writing the Python code does not yet implement the Grove LCD.
 - [ ] Implement the Grove LCD
 - [ ] Make multi-user (eg: for emergency override, notifications)
 
+## Notes on the ASCOM/Alpaca implementation
+
+From: Roger Boulanger <rogerjb88@gmail.com>\
+Date: Fri, Sep 19, 2025 at 2:40 PM\
+Subject: East Wing Automation.\
+To: David Kensiski <David@kensiski.org>\
+
+Hi Dave:
+
+Following our brief discussion on this subject a couple days ago, I'd like to confirm a couple things.
+
+First, T-Rax will need to include a Dome Alpaca Server which accepts "OpenShutter" and "CloseShutter" commands to open & close the roof.
+
+In addition, it will need to expose the ShutterStaus ("ShutterOpen" or "ShutterClosed"). While NINA will send out Discord notifications for both conditions, it will only look for a "ShutterOpen" condition before attempting to do anything with the telescope.
+
+How do you feel about having T-Rax automatically turning on Mount Power whenever the roof is fully open and off when it isn't? Otherwise we'd have to use one of the other standard ASCOM Dome commands to do this from NINA. Not impossible but just a little weird.
+
+A benefit to SkyX users would be one less Checklist step to execute;-)
+
+Roger
 
 # Installation
 
