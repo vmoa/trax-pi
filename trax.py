@@ -22,9 +22,13 @@ import device
 import test_mode
 import util
 import sse
+import alpaca
 
 import flask
 app = flask.Flask(__name__)
+
+# Register minimal Alpaca dome interface (shutter-only)
+alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
 
 version = 'v1.0.8'      # T-Rax version
 statusInterval = 60     # Seconds between status updates without input changes

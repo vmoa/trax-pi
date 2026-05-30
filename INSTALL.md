@@ -86,3 +86,25 @@ sudo -u $NEWUSER mkdir ~$NEWUSER/.ssh
 sudo -u $NEWUSER vi ~$NEWUSER/.ssh/authorized_keys
 sudo -u $NEWUSER chmod 700 ~$NEWUSER/.ssh
 ```
+
+# Alpaca (ASCOM) API
+
+This project exposes a minimal ASCOM Alpaca-compatible dome interface (shutter-only) at `/api/v1/dome/0`.
+
+Quick test examples (once `trax` is running):
+
+```
+# Check connected
+curl http://<host>:5000/api/v1/dome/0/connected
+
+# Open shutter
+curl http://<host>:5000/api/v1/dome/0/openshutter
+
+# Close shutter
+curl http://<host>:5000/api/v1/dome/0/closeshutter
+
+# Query shutter state
+curl http://<host>:5000/api/v1/dome/0/shutterstate
+```
+
+The API returns JSON in the Alpaca format with `Value`, `ClientTransactionID`, `ServerTransactionID`, `ErrorNumber`, and `ErrorMessage` fields.
