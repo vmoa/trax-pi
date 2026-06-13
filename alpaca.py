@@ -52,6 +52,10 @@ class Alpaca:
         app.add_url_rule(prefix + '/canpark', endpoint=prefix + '_canpark', view_func=self._canpark, methods=['GET'])
         app.add_url_rule(prefix + '/canfindhome', endpoint=prefix + '_canfindhome', view_func=self._canfindhome, methods=['GET'])
 
+        # Basic discovery / service info (rooted at the base path)
+        app.add_url_rule(self.base + '/discovery', endpoint=prefix + '_discovery', view_func=self._discovery, methods=['GET'])
+        app.add_url_rule(self.base + '/apiversion', endpoint=prefix + '_apiversion', view_func=self._apiversion, methods=['GET'])
+
         # Shutter control
         app.add_url_rule(prefix + '/openshutter', endpoint=prefix + '_openshutter', view_func=self._openshutter, methods=['GET','POST'])
         app.add_url_rule(prefix + '/closeshutter', endpoint=prefix + '_closeshutter', view_func=self._closeshutter, methods=['GET','POST'])
@@ -95,6 +99,27 @@ class Alpaca:
 
     def _canfindhome(self):
         return self._resp(False)
+
+    # Discovery / API info endpoints
+    def _discovery(self):
+        # Return a minimal device list suitable for clients to discover available devices
+        dev = {
+            'DeviceType': 'dome',
+            'DeviceNumber': self.device_number,
+            'DeviceName': 'T-Rax Roof Dome',
+            'Connected': True,
+            'BaseURL': self._prefix(),
+        }
+        return self._resp([dev])
+
+    def _apiversion(self):
+        # Return basic server/APi info
+        info = {
+            'AlpacaVersion': 1,
+            'ServerName': 'T-Rax',
+            'Vendor': 'Robert Ferguson Observatory'
+        }
+        return self._resp(info)
 
     # Shutter state mapping
     def _get_shutter_state(self):
