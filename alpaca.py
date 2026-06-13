@@ -14,6 +14,8 @@ conditions used elsewhere in the project.
 
 import json
 import logging
+import socket
+import struct
 import threading
 import time
 
@@ -21,9 +23,13 @@ import flask
 
 import browser
 import device
+import util
 
 ROOF_STATE_TIMEOUT = 30
 ROOF_STATE_POLL_INTERVAL = 0.5
+DISCOVERY_MULTICAST_GROUP = '239.255.255.250'
+DISCOVERY_MULTICAST_PORT = 32227
+DISCOVERY_RESPONSE_ST = 'urn:schemas-upnp-org:device:Alpaca:1'
 
 
 class Alpaca:
@@ -55,6 +61,7 @@ class Alpaca:
         # Basic discovery / service info (rooted at the base path)
         app.add_url_rule(self.base + '/discovery', endpoint=prefix + '_discovery', view_func=self._discovery, methods=['GET'])
         app.add_url_rule(self.base + '/apiversion', endpoint=prefix + '_apiversion', view_func=self._apiversion, methods=['GET'])
+        self._start_multicast_responder()
 
         # Shutter control
         app.add_url_rule(prefix + '/openshutter', endpoint=prefix + '_openshutter', view_func=self._openshutter, methods=['GET','POST'])
@@ -100,26 +107,91 @@ class Alpaca:
     def _canfindhome(self):
         return self._resp(False)
 
-    # Discovery / API info endpoints
-    def _discovery(self):
-        # Return a minimal device list suitable for clients to discover available devices
-        dev = {
+    def _discovery_data(self):
+        ip_address = util.get_ip()
+        return {
             'DeviceType': 'dome',
             'DeviceNumber': self.device_number,
             'DeviceName': 'T-Rax Roof Dome',
             'Connected': True,
             'BaseURL': self._prefix(),
+            'APIVersion': 1,
+            'ServerName': 'T-Rax',
+            'Vendor': 'Robert Ferguson Observatory',
+            'Manufacturer': 'Robert Ferguson Observatory',
+            'IPAddress': ip_address,
+            'HTTPPort': 5000,
+            'SupportedApiVersions': [1],
+            'Description': 'ASCOM Alpaca dome shutter interface',
         }
-        return self._resp([dev])
+
+    def _discovery(self):
+        return self._resp([self._discovery_data()])
+
+    def _apiversion_data(self):
+        return {
+            'AlpacaVersion': 1,
+            'CurrentApiVersion': 1,
+            'SupportedApiVersions': [1],
+            'ServerName': 'T-Rax',
+            'Vendor': 'Robert Ferguson Observatory',
+            'ServerBaseURL': self.base,
+        }
 
     def _apiversion(self):
-        # Return basic server/APi info
-        info = {
-            'AlpacaVersion': 1,
-            'ServerName': 'T-Rax',
-            'Vendor': 'Robert Ferguson Observatory'
-        }
-        return self._resp(info)
+        return self._resp(self._apiversion_data())
+
+    def _format_discovery_response(self, client_addr):
+        location = 'http://{}:{}/api/v1/discovery'.format(util.get_ip(), 5000)
+        lines = [
+            'HTTP/1.1 200 OK',
+            'CACHE-CONTROL: max-age=1800',
+            'EXT:',
+            'LOCATION: {}'.format(location),
+            'SERVER: Python/3 UPnP/1.0 Alpaca/1.0',
+            'ST: {}'.format(DISCOVERY_RESPONSE_ST),
+            'USN: uuid:trax:dome:{}'.format(self.device_number),
+            'ALPACA-VERSION: 1',
+            '',
+            ''
+        ]
+        return '\r\n'.join(lines).encode('utf-8')
+
+    def _multicast_responder(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            sock.bind(('', DISCOVERY_MULTICAST_PORT))
+        except OSError as e:
+            logging.error('Alpaca multicast bind failed: %s', e)
+            return
+
+        group = socket.inet_aton(DISCOVERY_MULTICAST_GROUP)
+        mreq = struct.pack('4sL', group, socket.INADDR_ANY)
+        try:
+            sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+        except Exception as e:
+            logging.error('Alpaca multicast group join failed: %s', e)
+            sock.close()
+            return
+
+        logging.info('Alpaca multicast responder listening on %s:%s', DISCOVERY_MULTICAST_GROUP, DISCOVERY_MULTICAST_PORT)
+        while True:
+            try:
+                data, addr = sock.recvfrom(1024)
+                if not data:
+                    continue
+                text = data.decode('utf-8', errors='ignore')
+                if 'M-SEARCH' in text or 'ALPACA_DISCOVERY' in text.upper() or 'DISCOVERY' in text.upper():
+                    logging.info('Received discovery request from %s', addr)
+                    response = self._format_discovery_response(addr)
+                    sock.sendto(response, addr)
+            except Exception as e:
+                logging.error('Alpaca multicast responder error: %s', e)
+
+    def _start_multicast_responder(self):
+        thread = threading.Thread(target=self._multicast_responder, daemon=True)
+        thread.start()
 
     # Shutter state mapping
     def _get_shutter_state(self):

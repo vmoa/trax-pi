@@ -5,6 +5,8 @@ from types import SimpleNamespace
 from flask import Flask
 import json
 
+import util
+
 # Provide a minimal gpiozero stub for non-Pi test environments
 import sys
 import types
@@ -82,5 +84,28 @@ def run_tests():
         print(e, '->', r.status_code, body)
 
 
+def test_multicast_response_format():
+    # Prevent the actual responder thread from binding in test mode
+    original_start = alpaca.Alpaca._start_multicast_responder
+    original_get_ip = util.get_ip
+    alpaca.Alpaca._start_multicast_responder = lambda self: None
+    util.get_ip = lambda: '127.0.0.1'
+    try:
+        app = Flask(__name__)
+        client_app = alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
+        response = client_app._format_discovery_response(('127.0.0.1', 65000))
+        assert isinstance(response, bytes)
+        text = response.decode('utf-8')
+        assert 'HTTP/1.1 200 OK' in text
+        assert 'LOCATION: http://127.0.0.1:5000/api/v1/discovery' in text
+        assert 'ST: urn:schemas-upnp-org:device:Alpaca:1' in text
+        assert 'USN: uuid:trax:dome:0' in text
+    finally:
+        alpaca.Alpaca._start_multicast_responder = original_start
+        util.get_ip = original_get_ip
+    print('Multicast response format test passed')
+
+
 if __name__ == '__main__':
     run_tests()
+    test_multicast_response_format()
