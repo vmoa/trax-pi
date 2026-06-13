@@ -15,11 +15,15 @@ conditions used elsewhere in the project.
 import json
 import logging
 import threading
+import time
 
 import flask
 
 import browser
 import device
+
+ROOF_STATE_TIMEOUT = 30
+ROOF_STATE_POLL_INTERVAL = 0.5
 
 
 class Alpaca:
@@ -108,6 +112,31 @@ class Alpaca:
         except Exception:
             return 0
 
+    def _start_roof_state_watcher(self, target_sensor, success_fn, action_name):
+        def watcher():
+            deadline = time.time() + ROOF_STATE_TIMEOUT
+            while time.time() < deadline:
+                if target_sensor.isOn():
+                    success_fn()
+                    return
+                time.sleep(ROOF_STATE_POLL_INTERVAL)
+            browser.browser.sendNotice(
+                "Timeout waiting for roof {} after {} seconds".format(action_name, ROOF_STATE_TIMEOUT),
+                log='ERROR'
+            )
+
+        thread = threading.Thread(target=watcher, daemon=True)
+        thread.start()
+
+    def _on_open_complete(self):
+        browser.browser.sendNotice("Roof open; turning off roof power and enabling mount power", log='INFO')
+        device.Gpio.roofout.turnOff()
+        device.Gpio.mntout.turnOn()
+
+    def _on_close_complete(self):
+        browser.browser.sendNotice("Roof closed; turning off roof power", log='INFO')
+        device.Gpio.roofout.turnOff()
+
     def _shutterstate(self):
         return self._resp(self._get_shutter_state())
 
@@ -117,10 +146,20 @@ class Alpaca:
         if device.Gpio.open.isOn():
             return self._resp(True)
 
+        # Require the telescope to be parked before cutting mount power.
+        if (device.Gpio.park.checkParked() != device.park.PARKED):
+            return self._resp(False, 1, 'Cannot open shutter: mount must be parked first')
+
+        # Ensure mount power is off and roof power is on before opening.
+        device.Gpio.mntout.turnOff()
+        device.Gpio.roofout.turnOn()
+
         # Use the same safety checks as the browser/startStop path by
         # delegating to browser.startStop which toggles roof appropriately
         result = browser.browser.startStop(self.app)
         ok = (result == 'OK')
+        if ok:
+            self._start_roof_state_watcher(device.Gpio.open, self._on_open_complete, 'open')
         return self._resp(ok, 0 if ok else 1, '' if ok else 'Failed to open shutter')
 
     def _closeshutter(self):
@@ -129,8 +168,18 @@ class Alpaca:
         if device.Gpio.close.isOn():
             return self._resp(True)
 
+        # Require the telescope to be parked before cutting mount power.
+        if (device.Gpio.park.checkParked() != device.park.PARKED):
+            return self._resp(False, 2, 'Cannot close shutter: mount must be parked first')
+
+        # Ensure mount power is off and roof power is on before closing.
+        device.Gpio.mntout.turnOff()
+        device.Gpio.roofout.turnOn()
+
         result = browser.browser.startStop(self.app)
         ok = (result == 'OK')
+        if ok:
+            self._start_roof_state_watcher(device.Gpio.close, self._on_close_complete, 'close')
         return self._resp(ok, 0 if ok else 2, '' if ok else 'Failed to close shutter')
 
 
