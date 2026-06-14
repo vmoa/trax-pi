@@ -72,6 +72,21 @@ def initialize():
     else:
         loggingConfig['filename'] = args.logfile if args.logfile else default_logfile;
     logging.basicConfig(**loggingConfig)
+    logging.basicConfig(**loggingConfig)
+    # Ensure DEBUG logs actually appear when requested: set root and common
+    # framework loggers to DEBUG when `--debug` is used.
+    if (args.debug):
+        logging.getLogger().setLevel(logging.DEBUG)
+        try:
+            logging.getLogger('werkzeug').setLevel(logging.DEBUG)
+        except Exception:
+            pass
+        try:
+            logging.getLogger('flask.app').setLevel(logging.DEBUG)
+        except Exception:
+            pass
+        logging.debug('Debug logging enabled')
+
     logging.info("Initializing T-Rax for the Raspberry Pi {}".format(version))
     if (args.simulator):
         logging.info("Adjusting timings for simulator")
