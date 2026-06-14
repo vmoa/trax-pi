@@ -61,6 +61,10 @@ class Alpaca:
         # Basic discovery / service info (rooted at the base path)
         app.add_url_rule(self.base + '/discovery', endpoint=prefix + '_discovery', view_func=self._discovery, methods=['GET'])
         app.add_url_rule(self.base + '/apiversion', endpoint=prefix + '_apiversion', view_func=self._apiversion, methods=['GET'])
+        # Management endpoints
+        app.add_url_rule(self.base + '/management/apiversions', endpoint=prefix + '_management_apiversions', view_func=self._management_apiversions, methods=['GET'])
+        # Some clients may probe the unprefixed management path; register it too
+        app.add_url_rule('/management/apiversions', endpoint=prefix + '_management_apiversions_unprefixed', view_func=self._management_apiversions, methods=['GET'])
         app.add_url_rule(self.base + '/configureddevices', endpoint=prefix + '_configureddevices', view_func=self._configureddevices, methods=['GET'])
         self._start_multicast_responder()
 
@@ -141,6 +145,14 @@ class Alpaca:
 
     def _apiversion(self):
         return self._resp(self._apiversion_data())
+
+    def _management_apiversions(self):
+        """Return list of supported API versions for management discovery."""
+        try:
+            return flask.jsonify([self._apiversion_data()])
+        except Exception as e:
+            logging.error('Failed to produce management apiversions response: %s', e)
+            return flask.jsonify([])
 
     def _configureddevices(self):
         # Return list of configured devices on this server
