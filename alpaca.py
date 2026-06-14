@@ -155,46 +155,46 @@ class Alpaca:
         return self._resp(devices)
 
     def _format_discovery_response(self, client_addr):
-        location = 'http://{}:{}/api/v1/discovery'.format(util.get_ip(), 5000)
-        lines = [
-            'HTTP/1.1 200 OK',
-            'CACHE-CONTROL: max-age=1800',
-            'EXT:',
-            'LOCATION: {}'.format(location),
-            'SERVER: Python/3 UPnP/1.0 Alpaca/1.0',
-            'ST: {}'.format(DISCOVERY_RESPONSE_ST),
-            'USN: uuid:trax:dome:{}'.format(self.device_number),
-            'ALPACA-VERSION: 1',
-            '',
-            ''
-        ]
-        return '\r\n'.join(lines).encode('utf-8')
+        # Return a JSON-encoded discovery payload per the Alpaca discovery specification.
+        # Use the same structure as the HTTP discovery endpoint, but encoded as JSON
+        # so UDP responders expecting Alpaca JSON will receive the expected format.
+        try:
+            # Per request, only advertise the Alpaca HTTP port in the UDP response
+            payload = {'AlpacaPort': 5000}
+            return json.dumps(payload).encode('utf-8')
+        except Exception as e:
+            logging.error('Failed to format JSON discovery response: %s', e)
+            return b''
 
     def _multicast_responder(self):
+        # Listen for UDP broadcast discovery probes on the discovery port.
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
+            if hasattr(socket, 'SO_REUSEPORT'):
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        except Exception:
+            pass
+        # Allow receiving broadcasts
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        except Exception:
+            pass
+        try:
             sock.bind(('', DISCOVERY_MULTICAST_PORT))
         except OSError as e:
-            logging.error('Alpaca multicast bind failed: %s', e)
+            logging.error('Alpaca broadcast bind failed: %s', e)
             return
 
-        group = socket.inet_aton(DISCOVERY_MULTICAST_GROUP)
-        mreq = struct.pack('4sL', group, socket.INADDR_ANY)
-        try:
-            sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-        except Exception as e:
-            logging.error('Alpaca multicast group join failed: %s', e)
-            sock.close()
-            return
-
-        logging.info('Alpaca multicast responder listening on %s:%s', DISCOVERY_MULTICAST_GROUP, DISCOVERY_MULTICAST_PORT)
+        logging.info('Alpaca broadcast responder listening on port %s', DISCOVERY_MULTICAST_PORT)
         while True:
             try:
                 data, addr = sock.recvfrom(1024)
                 if not data:
                     continue
                 text = data.decode('utf-8', errors='ignore')
+                # Respond to common discovery probes. Accept multicast-style M-SEARCH
+                # as well as simple broadcast discovery strings.
                 if 'M-SEARCH' in text or 'ALPACA_DISCOVERY' in text.upper() or 'DISCOVERY' in text.upper():
                     logging.info('Received discovery request from %s', addr)
                     response = self._format_discovery_response(addr)
