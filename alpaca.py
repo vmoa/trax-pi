@@ -61,6 +61,7 @@ class Alpaca:
         # Basic discovery / service info (rooted at the base path)
         app.add_url_rule(self.base + '/discovery', endpoint=prefix + '_discovery', view_func=self._discovery, methods=['GET'])
         app.add_url_rule(self.base + '/apiversion', endpoint=prefix + '_apiversion', view_func=self._apiversion, methods=['GET'])
+        app.add_url_rule(self.base + '/configureddevices', endpoint=prefix + '_configureddevices', view_func=self._configureddevices, methods=['GET'])
         self._start_multicast_responder()
 
         # Shutter control
@@ -140,6 +141,18 @@ class Alpaca:
 
     def _apiversion(self):
         return self._resp(self._apiversion_data())
+
+    def _configureddevices(self):
+        # Return list of configured devices on this server
+        devices = [
+            {
+                'DeviceType': 'dome',
+                'DeviceNumber': self.device_number,
+                'DeviceName': 'T-Rax Roof Dome',
+                'UniqueID': 'uuid:trax:dome:{}'.format(self.device_number),
+            }
+        ]
+        return self._resp(devices)
 
     def _format_discovery_response(self, client_addr):
         location = 'http://{}:{}/api/v1/discovery'.format(util.get_ip(), 5000)

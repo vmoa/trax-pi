@@ -67,6 +67,7 @@ def run_tests():
         '/api/v1/dome/0/description',
         '/api/v1/discovery',
         '/api/v1/apiversion',
+        '/api/v1/configureddevices',
         '/api/v1/dome/0/canrotate',
         '/api/v1/dome/0/canpark',
         '/api/v1/dome/0/canfindhome',
