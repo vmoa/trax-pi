@@ -104,6 +104,11 @@ class Alpaca:
         # ASCOM common properties a compliant client queries on connect.
         app.add_url_rule(prefix + '/interfaceversion', endpoint=prefix + '_interfaceversion', view_func=self._interfaceversion, methods=['GET'])
         app.add_url_rule(prefix + '/supportedactions', endpoint=prefix + '_supportedactions', view_func=self._supportedactions, methods=['GET'])
+        # ASCOM common methods. Unsupported here, but they must return the
+        # standard not-implemented envelope (not a bare 404) for conformance
+        # tools and clients that probe them.
+        for meth in ('action', 'commandblind', 'commandbool', 'commandstring'):
+            app.add_url_rule(prefix + '/' + meth, endpoint=prefix + '_' + meth, view_func=self._not_impl_view(meth), methods=['GET', 'POST', 'PUT'])
 
         # Capability flags. The roof is a shutter-only dome: it can set the
         # shutter but cannot rotate, slave, park or find home.
@@ -420,14 +425,18 @@ class Alpaca:
             self._shutter_status = SHUTTER_OPEN
             return self._resp()
 
-        # The roof is driven by a single START/STOP toggle, so a second command
-        # while it is moving would stop (not continue/reverse) it. Treat a
-        # repeated open as idempotent, and refuse to open while it is closing
-        # rather than halting it mid-travel.
+        # The roof is driven by a single START/STOP toggle, so opening can only
+        # be started safely from the fully-closed state. From any other
+        # position the toggle has no defined direction and could stop or
+        # reverse a roof that is already moving -- including motion started via
+        # the browser /startstop path, before this process restarted, or after
+        # a move watcher timed out, none of which update _shutter_status. A move
+        # already tracked as opening is idempotent; every other non-closed
+        # position is refused rather than guessed at.
         if self._shutter_status == SHUTTER_OPENING:
             return self._resp()
-        if self._shutter_status == SHUTTER_CLOSING:
-            return self._resp(error_number=1, error_message='Cannot open shutter: roof is closing; wait for it to finish')
+        if not device.Gpio.close.isOn():
+            return self._resp(error_number=1, error_message='Cannot open shutter: roof is not closed (position unknown or in motion)')
 
         # Require the telescope to be parked before cutting mount power.
         if (device.Gpio.park.checkParked() != device.park.PARKED):
@@ -454,13 +463,15 @@ class Alpaca:
             self._shutter_status = SHUTTER_CLOSED
             return self._resp()
 
-        # Mirror OpenShutter: a repeated close while already closing is
-        # idempotent, and closing while the roof is opening is refused rather
-        # than stopping it mid-travel (single START/STOP toggle hardware).
+        # Mirror OpenShutter: closing can only be started from the fully-open
+        # state. A matching close already in progress is idempotent; any other
+        # non-open position (midway, in motion, or unknown -- including motion
+        # started outside this Alpaca instance) is refused so the directionless
+        # toggle never stops or reverses a moving roof.
         if self._shutter_status == SHUTTER_CLOSING:
             return self._resp()
-        if self._shutter_status == SHUTTER_OPENING:
-            return self._resp(error_number=2, error_message='Cannot close shutter: roof is opening; wait for it to finish')
+        if not device.Gpio.open.isOn():
+            return self._resp(error_number=2, error_message='Cannot close shutter: roof is not open (position unknown or in motion)')
 
         # Require the telescope to be parked before cutting mount power.
         if (device.Gpio.park.checkParked() != device.park.PARKED):

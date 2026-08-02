@@ -125,6 +125,11 @@ def test_ascom_contract():
     for name in ('findhome', 'park', 'setpark', 'slewtoaltitude', 'slewtoazimuth', 'synctoazimuth'):
         body = client.put('/api/v1/dome/0/' + name).get_json()
         assert body['ErrorNumber'] == alpaca.NOT_IMPLEMENTED, (name, body)
+    # ASCOM common methods respond with the not-implemented envelope, not 404.
+    for name in ('action', 'commandblind', 'commandbool', 'commandstring'):
+        body = client.put('/api/v1/dome/0/' + name).get_json()
+        assert body['ErrorNumber'] == alpaca.NOT_IMPLEMENTED, (name, body)
+
     # Slaved rejects a slave-enable but accepts the no-op disable.
     assert client.put('/api/v1/dome/0/slaved', data={'Slaved': 'true'}).get_json()['ErrorNumber'] == alpaca.NOT_IMPLEMENTED
     assert client.put('/api/v1/dome/0/slaved', data={'Slaved': 'false'}).get_json()['ErrorNumber'] == 0
@@ -178,13 +183,22 @@ def test_shutter_command_guards():
     inst = alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
     client = app.test_client()
 
-    # An open is already in progress.
+    # An open is already in progress (tracked by this instance).
     inst._shutter_status = alpaca.SHUTTER_OPENING
     # Repeated OpenShutter is idempotent success and does NOT re-toggle the fob.
     assert client.put('/api/v1/dome/0/openshutter').get_json()['ErrorNumber'] == 0
     # Opposite CloseShutter is refused rather than stopping the roof mid-travel.
     assert client.put('/api/v1/dome/0/closeshutter').get_json()['ErrorNumber'] == 2
-    assert calls['n'] == 0, 'startStop must not be invoked while a move is in flight'
+
+    # Untracked midway state: motion started outside this instance (e.g. via
+    # trax.py's /startstop, after a restart, or after a watcher timeout) leaves
+    # _shutter_status None/ERROR. A command must be refused, never toggled.
+    for state in (None, alpaca.SHUTTER_ERROR):
+        inst._shutter_status = state
+        assert client.put('/api/v1/dome/0/openshutter').get_json()['ErrorNumber'] == 1, state
+        assert client.put('/api/v1/dome/0/closeshutter').get_json()['ErrorNumber'] == 2, state
+
+    assert calls['n'] == 0, 'startStop must not be invoked from a non-terminal roof position'
 
     print('Shutter command guard test passed')
 
