@@ -31,6 +31,10 @@ import alpaca
 import device
 import browser
 
+# Capture the genuine watcher before any test stubs it on the class, so the
+# watcher-behaviour test can restore the real implementation.
+_REAL_START_WATCHER = alpaca.Alpaca._start_roof_state_watcher
+
 
 class DummySensor:
     def __init__(self, val=False):
@@ -289,6 +293,50 @@ def test_reservation_rollback_and_pending():
     print('Reservation rollback/pending test passed')
 
 
+def test_watcher_failure_modes():
+    """Watcher-start failure keeps the move tracked; sensor errors go to ERROR."""
+    import time as _time
+    device.Gpio = SimpleNamespace(
+        open=DummySensor(False), close=DummySensor(True),
+        park=SimpleNamespace(checkParked=(lambda: device.park.PARKED)),
+        mntout=SimpleNamespace(turnOff=(lambda: None), turnOn=(lambda: None)),
+        roofout=SimpleNamespace(turnOn=(lambda: None), turnOff=(lambda: None)),
+    )
+    browser.browser.startStop = lambda app: 'OK'
+    alpaca.Alpaca._start_multicast_responder = lambda self: None
+    # Restore the genuine watcher (earlier tests stub it on the class).
+    alpaca.Alpaca._start_roof_state_watcher = _REAL_START_WATCHER
+
+    # (1) The fob has already actuated (startStop OK) but the watcher fails to
+    # start: the move must stay tracked as Opening -- NOT rolled back -- so a
+    # retry cannot fire a second, roof-stopping toggle.
+    def raise_watcher(self, gen, *a):
+        raise RuntimeError('cannot start thread')
+    alpaca.Alpaca._start_roof_state_watcher = raise_watcher
+    inst = alpaca.Alpaca(Flask(__name__), device_number=0, base_path='/api/v1')
+    client = inst.app.test_client()
+    body = client.put('/api/v1/dome/0/openshutter').get_json()
+    assert body['ErrorNumber'] == 0, body
+    assert inst._shutter_status == alpaca.SHUTTER_OPENING and inst._move_pending is False
+    alpaca.Alpaca._start_roof_state_watcher = _REAL_START_WATCHER
+
+    # (2) A sensor read raising inside the (real) watcher transitions to ERROR
+    # instead of leaving the status stuck Opening forever.
+    class BoomSensor:
+        def isOn(self):
+            raise RuntimeError('gpio read fault')
+    inst2 = alpaca.Alpaca(Flask(__name__), device_number=0, base_path='/api/v1')
+    inst2._shutter_status = alpaca.SHUTTER_OPENING
+    inst2._motion_gen = 5
+    inst2._start_roof_state_watcher(5, BoomSensor(), inst2._on_open_complete, 'open')
+    deadline = _time.time() + 2
+    while _time.time() < deadline and inst2._shutter_status == alpaca.SHUTTER_OPENING:
+        _time.sleep(0.01)
+    assert inst2._shutter_status == alpaca.SHUTTER_ERROR
+
+    print('Watcher failure-mode test passed')
+
+
 def test_discovery_response_format():
     """The UDP discovery reply is JSON naming the Alpaca HTTP port."""
     original_start = alpaca.Alpaca._start_multicast_responder
@@ -311,4 +359,5 @@ if __name__ == '__main__':
     test_shutter_command_guards()
     test_motion_generation()
     test_reservation_rollback_and_pending()
+    test_watcher_failure_modes()
     test_discovery_response_format()

@@ -406,16 +406,26 @@ class Alpaca:
         # cutting roof power and enabling mount power mid-close.
         def watcher():
             deadline = time.time() + ROOF_STATE_TIMEOUT
-            while time.time() < deadline:
-                if self._motion_gen != gen:
-                    return  # superseded by a newer move
-                if target_sensor.isOn():
-                    with self._lock:
-                        if self._motion_gen != gen:
-                            return
-                        success_fn()
-                    return
-                time.sleep(ROOF_STATE_POLL_INTERVAL)
+            try:
+                while time.time() < deadline:
+                    if self._motion_gen != gen:
+                        return  # superseded by a newer move
+                    if target_sensor.isOn():
+                        with self._lock:
+                            if self._motion_gen != gen:
+                                return
+                            success_fn()
+                        return
+                    time.sleep(ROOF_STATE_POLL_INTERVAL)
+            except Exception as e:
+                # A transient sensor/GPIO read (or completion callback) failure
+                # must not leave the daemon thread dead with the status stuck
+                # Opening/Closing forever. Fall through to the error transition.
+                logging.error('Alpaca: roof %s watcher error: %s', action_name, e)
+                with self._lock:
+                    if self._motion_gen == gen:
+                        self._shutter_status = SHUTTER_ERROR
+                return
             with self._lock:
                 if self._motion_gen != gen:
                     return
@@ -504,9 +514,10 @@ class Alpaca:
             gen = self._motion_gen
 
         # Blocking safety checks and actuation happen outside the lock so status
-        # reads are not stalled by the (multi-second) park check. Any failure or
-        # exception must roll the reservation back, otherwise the instance would
-        # report Opening/Closing forever and reject every later command.
+        # reads are not stalled by the (multi-second) park check. Failures *before*
+        # the fob is toggled roll the reservation back; once startStop() has
+        # actuated the roof we must not roll back (a rollback would let a retry
+        # re-toggle and stop the moving roof).
         try:
             if device.Gpio.park.checkParked() != device.park.PARKED:
                 return self._abort_move(gen, err_no, 'Cannot {} shutter: mount must be parked first'.format(action))
@@ -518,18 +529,24 @@ class Alpaca:
             # Delegate to the same safety-checked toggle path used by the browser.
             if browser.browser.startStop(self.app) != 'OK':
                 return self._abort_move(gen, err_no, 'Failed to {} shutter'.format(action))
-
-            # Actuation confirmed: promote from pending to an active move (under
-            # the generation guard) and start the watcher.
-            with self._lock:
-                if self._motion_gen != gen:
-                    return self._resp()  # superseded during preflight
-                self._move_pending = False
-            self._start_roof_state_watcher(gen, target_sensor, success_fn, action)
-            return self._resp()
         except Exception as e:
-            logging.error('Alpaca: %s shutter failed: %s', action, e)
+            logging.error('Alpaca: %s shutter failed before actuation: %s', action, e)
             return self._abort_move(gen, err_no, 'Failed to {} shutter: {}'.format(action, e))
+
+        # startStop() has actuated the fob; browser.toggleFob() moves the roof
+        # asynchronously, so from here the roof is committed to moving. Promote
+        # the reservation to a confirmed move; any failure starting the watcher
+        # leaves the move conservatively tracked (Opening/Closing) rather than
+        # rolled back, so a retry cannot trigger a second, roof-stopping toggle.
+        with self._lock:
+            if self._motion_gen != gen:
+                return self._resp()  # superseded during preflight
+            self._move_pending = False
+        try:
+            self._start_roof_state_watcher(gen, target_sensor, success_fn, action)
+        except Exception as e:
+            logging.error('Alpaca: %s watcher failed to start; move left tracked: %s', action, e)
+        return self._resp()
 
     def _abort_move(self, gen, err_no, message):
         # Roll back a reserved-but-unstarted move so the sensors re-derive the
