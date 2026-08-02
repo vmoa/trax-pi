@@ -97,6 +97,9 @@ class Alpaca:
         app.add_url_rule(prefix + '/description', endpoint=prefix + '_description', view_func=self._description, methods=['GET'])
         app.add_url_rule(prefix + '/driverinfo', endpoint=prefix + '_driverinfo', view_func=self._driverinfo, methods=['GET'])
         app.add_url_rule(prefix + '/driverversion', endpoint=prefix + '_driverversion', view_func=self._driverversion, methods=['GET'])
+        # ASCOM common properties a compliant client queries on connect.
+        app.add_url_rule(prefix + '/interfaceversion', endpoint=prefix + '_interfaceversion', view_func=self._interfaceversion, methods=['GET'])
+        app.add_url_rule(prefix + '/supportedactions', endpoint=prefix + '_supportedactions', view_func=self._supportedactions, methods=['GET'])
 
         # Capability flags. The roof is a shutter-only dome: it can set the
         # shutter but cannot rotate, slave, park or find home.
@@ -180,6 +183,14 @@ class Alpaca:
 
     def _driverversion(self):
         return self._resp(DRIVER_VERSION)
+
+    def _interfaceversion(self):
+        # We implement the classic IDomeV2 property/method set.
+        return self._resp(2)
+
+    def _supportedactions(self):
+        # No device-specific custom actions are exposed.
+        return self._resp([])
 
     # Capability endpoints
     def _cansetshutter(self):
@@ -372,6 +383,15 @@ class Alpaca:
             self._shutter_status = SHUTTER_OPEN
             return self._resp()
 
+        # The roof is driven by a single START/STOP toggle, so a second command
+        # while it is moving would stop (not continue/reverse) it. Treat a
+        # repeated open as idempotent, and refuse to open while it is closing
+        # rather than halting it mid-travel.
+        if self._shutter_status == SHUTTER_OPENING:
+            return self._resp()
+        if self._shutter_status == SHUTTER_CLOSING:
+            return self._resp(error_number=1, error_message='Cannot open shutter: roof is closing; wait for it to finish')
+
         # Require the telescope to be parked before cutting mount power.
         if (device.Gpio.park.checkParked() != device.park.PARKED):
             return self._resp(error_number=1, error_message='Cannot open shutter: mount must be parked first')
@@ -396,6 +416,14 @@ class Alpaca:
         if device.Gpio.close.isOn():
             self._shutter_status = SHUTTER_CLOSED
             return self._resp()
+
+        # Mirror OpenShutter: a repeated close while already closing is
+        # idempotent, and closing while the roof is opening is refused rather
+        # than stopping it mid-travel (single START/STOP toggle hardware).
+        if self._shutter_status == SHUTTER_CLOSING:
+            return self._resp()
+        if self._shutter_status == SHUTTER_OPENING:
+            return self._resp(error_number=2, error_message='Cannot close shutter: roof is opening; wait for it to finish')
 
         # Require the telescope to be parked before cutting mount power.
         if (device.Gpio.park.checkParked() != device.park.PARKED):

@@ -75,6 +75,8 @@ def run_tests():
         '/api/v1/dome/0/description',
         '/api/v1/dome/0/driverinfo',
         '/api/v1/dome/0/driverversion',
+        '/api/v1/dome/0/interfaceversion',
+        '/api/v1/dome/0/supportedactions',
         '/api/v1/discovery',
         '/api/v1/apiversion',
         '/management/apiversions',
@@ -104,6 +106,10 @@ def test_ascom_contract():
 
     # CanSetShutter must be True or a client will not offer shutter control.
     assert client.get('/api/v1/dome/0/cansetshutter').get_json()['Value'] is True
+
+    # ASCOM common properties queried on connect must not 404.
+    assert client.get('/api/v1/dome/0/interfaceversion').get_json()['Value'] == 2
+    assert client.get('/api/v1/dome/0/supportedactions').get_json()['Value'] == []
 
     # Roof is CLOSED in the fixture -> ASCOM ShutterState 1 (shutterClosed).
     status = client.get('/api/v1/dome/0/shutterstatus').get_json()
@@ -135,6 +141,35 @@ def test_ascom_contract():
     print('ASCOM contract test passed')
 
 
+def test_shutter_command_guards():
+    """A move already in flight must not be stopped by a repeated/opposite command."""
+    # Roof midway: neither end-stop sensor active.
+    device.Gpio = SimpleNamespace(
+        open=DummySensor(False),
+        close=DummySensor(False),
+        park=SimpleNamespace(checkParked=(lambda: device.park.PARKED)),
+        mntout=SimpleNamespace(turnOff=(lambda: None), turnOn=(lambda: None)),
+        roofout=SimpleNamespace(turnOn=(lambda: None), turnOff=(lambda: None)),
+    )
+    calls = {'n': 0}
+    browser.browser.startStop = lambda app: calls.__setitem__('n', calls['n'] + 1) or 'OK'
+    alpaca.Alpaca._start_multicast_responder = lambda self: None
+
+    app = Flask(__name__)
+    inst = alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
+    client = app.test_client()
+
+    # An open is already in progress.
+    inst._shutter_status = alpaca.SHUTTER_OPENING
+    # Repeated OpenShutter is idempotent success and does NOT re-toggle the fob.
+    assert client.put('/api/v1/dome/0/openshutter').get_json()['ErrorNumber'] == 0
+    # Opposite CloseShutter is refused rather than stopping the roof mid-travel.
+    assert client.put('/api/v1/dome/0/closeshutter').get_json()['ErrorNumber'] == 2
+    assert calls['n'] == 0, 'startStop must not be invoked while a move is in flight'
+
+    print('Shutter command guard test passed')
+
+
 def test_discovery_response_format():
     """The UDP discovery reply is JSON naming the Alpaca HTTP port."""
     original_start = alpaca.Alpaca._start_multicast_responder
@@ -154,4 +189,5 @@ def test_discovery_response_format():
 if __name__ == '__main__':
     run_tests()
     test_ascom_contract()
+    test_shutter_command_guards()
     test_discovery_response_format()
