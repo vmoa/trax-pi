@@ -62,6 +62,10 @@ ALPACA_HTTP_PORT = 5000
 
 DRIVER_VERSION = '1.1.0'
 
+# ASCOM error number for a property/method that is part of the interface but
+# not implemented by this driver (e.g. dome rotation on a shutter-only roof).
+NOT_IMPLEMENTED = 0x400
+
 # ASCOM ShutterState enumeration (Dome.ShutterStatus). These values are part
 # of the wire protocol -- clients interpret them literally, so they must match
 # the ASCOM standard exactly.
@@ -108,6 +112,23 @@ class Alpaca:
         app.add_url_rule(prefix + '/canrotate', endpoint=prefix + '_canrotate', view_func=self._canrotate, methods=['GET'])
         app.add_url_rule(prefix + '/canpark', endpoint=prefix + '_canpark', view_func=self._canpark, methods=['GET'])
         app.add_url_rule(prefix + '/canfindhome', endpoint=prefix + '_canfindhome', view_func=self._canfindhome, methods=['GET'])
+
+        # Advertising InterfaceVersion 2 promises the whole IDomeV2 contract, so
+        # the remaining rotation/park members must exist rather than 404. For a
+        # shutter-only roof the capability flags are all false, the boolean
+        # state properties report false, and the numeric position properties
+        # and rotation/park methods return a proper ASCOM "not implemented"
+        # error (better than a bare Flask 404 a strict client may reject on).
+        for cap in ('cansetaltitude', 'cansetazimuth', 'cansetpark', 'canslave'):
+            app.add_url_rule(prefix + '/' + cap, endpoint=prefix + '_' + cap, view_func=self._const_view(False), methods=['GET'])
+        for prop in ('athome', 'atpark', 'slewing'):
+            app.add_url_rule(prefix + '/' + prop, endpoint=prefix + '_' + prop, view_func=self._const_view(False), methods=['GET'])
+        for prop in ('altitude', 'azimuth'):
+            app.add_url_rule(prefix + '/' + prop, endpoint=prefix + '_' + prop, view_func=self._not_impl_view(prop), methods=['GET'])
+        for meth in ('findhome', 'park', 'setpark', 'slewtoaltitude', 'slewtoazimuth', 'synctoazimuth'):
+            app.add_url_rule(prefix + '/' + meth, endpoint=prefix + '_' + meth, view_func=self._not_impl_view(meth), methods=['GET', 'POST', 'PUT'])
+        # Slaved is readable (always false) and writable only to false.
+        app.add_url_rule(prefix + '/slaved', endpoint=prefix + '_slaved', view_func=self._slaved, methods=['GET', 'PUT'])
 
         # Basic discovery / service info (rooted at the base path)
         app.add_url_rule(self.base + '/discovery', endpoint=prefix + '_discovery', view_func=self._discovery, methods=['GET'])
@@ -161,6 +182,24 @@ class Alpaca:
         if value is not None:
             resp['Value'] = value
         return flask.jsonify(resp)
+
+    def _const_view(self, value):
+        """Build a zero-arg GET handler that always returns a constant value."""
+        return lambda: self._resp(value)
+
+    def _not_impl_view(self, name):
+        """Build a handler for an interface member this driver does not implement."""
+        return lambda: self._resp(error_number=NOT_IMPLEMENTED, error_message='{} is not implemented'.format(name))
+
+    def _slaved(self):
+        # A roll-off roof cannot slave to the telescope. Report false, and
+        # accept a PUT only when it sets Slaved=false (a no-op).
+        if flask.request.method == 'PUT':
+            want = flask.request.form.get('Slaved', 'false').lower() == 'true'
+            if want:
+                return self._resp(error_number=NOT_IMPLEMENTED, error_message='Slaving is not implemented')
+            return self._resp()
+        return self._resp(False)
 
     # Core info endpoints
     def _connected(self):

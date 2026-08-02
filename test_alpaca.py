@@ -111,6 +111,24 @@ def test_ascom_contract():
     assert client.get('/api/v1/dome/0/interfaceversion').get_json()['Value'] == 2
     assert client.get('/api/v1/dome/0/supportedactions').get_json()['Value'] == []
 
+    # Advertising InterfaceVersion 2 requires the full IDomeV2 surface to
+    # exist. Capability/state flags respond (false) rather than 404...
+    for cap in ('cansetaltitude', 'cansetazimuth', 'cansetpark', 'canslave',
+                'athome', 'atpark', 'slewing', 'slaved'):
+        body = client.get('/api/v1/dome/0/' + cap).get_json()
+        assert body['ErrorNumber'] == 0 and body['Value'] is False, (cap, body)
+    # ...and the unsupported rotation/park members return a proper ASCOM
+    # "not implemented" error (0x400) instead of a bare Flask 404.
+    for name in ('altitude', 'azimuth'):
+        body = client.get('/api/v1/dome/0/' + name).get_json()
+        assert body['ErrorNumber'] == alpaca.NOT_IMPLEMENTED and 'Value' not in body, (name, body)
+    for name in ('findhome', 'park', 'setpark', 'slewtoaltitude', 'slewtoazimuth', 'synctoazimuth'):
+        body = client.put('/api/v1/dome/0/' + name).get_json()
+        assert body['ErrorNumber'] == alpaca.NOT_IMPLEMENTED, (name, body)
+    # Slaved rejects a slave-enable but accepts the no-op disable.
+    assert client.put('/api/v1/dome/0/slaved', data={'Slaved': 'true'}).get_json()['ErrorNumber'] == alpaca.NOT_IMPLEMENTED
+    assert client.put('/api/v1/dome/0/slaved', data={'Slaved': 'false'}).get_json()['ErrorNumber'] == 0
+
     # Roof is CLOSED in the fixture -> ASCOM ShutterState 1 (shutterClosed).
     status = client.get('/api/v1/dome/0/shutterstatus').get_json()
     assert status['Value'] == alpaca.SHUTTER_CLOSED == 1, status
