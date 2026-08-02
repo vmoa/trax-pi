@@ -61,12 +61,12 @@ def _make_app():
     alpaca.Alpaca._start_multicast_responder = lambda self: None
 
     app = Flask(__name__)
-    alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
-    return app
+    inst = alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
+    return app, inst
 
 
 def run_tests():
-    app = _make_app()
+    app, _ = _make_app()
     client = app.test_client()
 
     endpoints = [
@@ -101,7 +101,7 @@ def run_tests():
 
 def test_ascom_contract():
     """Assert the ASCOM-specific interface contract a client (e.g. NINA) relies on."""
-    app = _make_app()
+    app, inst = _make_app()
     client = app.test_client()
 
     # CanSetShutter must be True or a client will not offer shutter control.
@@ -152,6 +152,13 @@ def test_ascom_contract():
     assert body['ErrorNumber'] == 0, body
     assert body['ClientTransactionID'] == 42, body
 
+    # While the move is reserved, status reports Opening and Slewing is true
+    # even though the origin (closed) end stop may still be asserted.
+    assert client.get('/api/v1/dome/0/shutterstatus').get_json()['Value'] == alpaca.SHUTTER_OPENING
+    assert client.get('/api/v1/dome/0/slewing').get_json()['Value'] is True
+
+    # Reset the tracked move to exercise CloseShutter from the resting state.
+    inst._shutter_status = None
     # CloseShutter is likewise a PUT method that succeeds.
     assert client.put('/api/v1/dome/0/closeshutter').get_json()['ErrorNumber'] == 0
     # AbortSlew cannot be honoured on a roll-off roof, so it must report an
@@ -203,6 +210,44 @@ def test_shutter_command_guards():
     print('Shutter command guard test passed')
 
 
+def test_motion_generation():
+    """Each accepted move opens a new generation so a stale watcher goes inert."""
+    device.Gpio = SimpleNamespace(
+        open=DummySensor(False), close=DummySensor(True),
+        park=SimpleNamespace(checkParked=(lambda: device.park.PARKED)),
+        mntout=SimpleNamespace(turnOff=(lambda: None), turnOn=(lambda: None)),
+        roofout=SimpleNamespace(turnOn=(lambda: None), turnOff=(lambda: None)),
+    )
+    browser.browser.startStop = lambda app: 'OK'
+    alpaca.Alpaca._start_multicast_responder = lambda self: None
+    # Capture the generation each watcher would be tagged with (no threads).
+    started = []
+    alpaca.Alpaca._start_roof_state_watcher = lambda self, gen, *a: started.append(gen)
+
+    app = Flask(__name__)
+    inst = alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
+    client = app.test_client()
+
+    # Open from the closed state: accepted, generation 1, status reserved as
+    # Opening *before* the response returns.
+    assert client.put('/api/v1/dome/0/openshutter').get_json()['ErrorNumber'] == 0
+    assert inst._shutter_status == alpaca.SHUTTER_OPENING
+    assert started == [1] and inst._motion_gen == 1
+
+    # Simulate the open completing and the roof now reading open.
+    device.Gpio.open._v = True
+    device.Gpio.close._v = False
+    inst._shutter_status = alpaca.SHUTTER_OPEN
+
+    # Close from the open state opens a NEW generation, so the earlier watcher
+    # (gen 1) is superseded and cannot later apply _on_open_complete.
+    assert client.put('/api/v1/dome/0/closeshutter').get_json()['ErrorNumber'] == 0
+    assert inst._shutter_status == alpaca.SHUTTER_CLOSING
+    assert started == [1, 2] and inst._motion_gen == 2
+
+    print('Motion generation test passed')
+
+
 def test_discovery_response_format():
     """The UDP discovery reply is JSON naming the Alpaca HTTP port."""
     original_start = alpaca.Alpaca._start_multicast_responder
@@ -223,4 +268,5 @@ if __name__ == '__main__':
     run_tests()
     test_ascom_contract()
     test_shutter_command_guards()
+    test_motion_generation()
     test_discovery_response_format()

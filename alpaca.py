@@ -89,9 +89,13 @@ class Alpaca:
         self.app = app
         self.device_number = int(device_number)
         self.base = base_path.rstrip('/')
-        # Last direction the roof was commanded to move. Used to report
-        # Opening/Closing while the roof is between its end-stop sensors.
+        # Tracked shutter motion. `_shutter_status` holds the in-flight
+        # Opening/Closing direction (or a terminal value set by a watcher);
+        # `_lock` serialises command acceptance and state transitions, and
+        # `_motion_gen` tags each move so a superseded watcher goes inert.
         self._shutter_status = None
+        self._lock = threading.Lock()
+        self._motion_gen = 0
         # Register routes
         prefix = self._prefix()
 
@@ -126,8 +130,10 @@ class Alpaca:
         # error (better than a bare Flask 404 a strict client may reject on).
         for cap in ('cansetaltitude', 'cansetazimuth', 'cansetpark', 'canslave'):
             app.add_url_rule(prefix + '/' + cap, endpoint=prefix + '_' + cap, view_func=self._const_view(False), methods=['GET'])
-        for prop in ('athome', 'atpark', 'slewing'):
+        for prop in ('athome', 'atpark'):
             app.add_url_rule(prefix + '/' + prop, endpoint=prefix + '_' + prop, view_func=self._const_view(False), methods=['GET'])
+        # Slewing is derived from the live shutter status (see _slewing).
+        app.add_url_rule(prefix + '/slewing', endpoint=prefix + '_slewing', view_func=self._slewing, methods=['GET'])
         for prop in ('altitude', 'azimuth'):
             app.add_url_rule(prefix + '/' + prop, endpoint=prefix + '_' + prop, view_func=self._not_impl_view(prop), methods=['GET'])
         for meth in ('findhome', 'park', 'setpark', 'slewtoaltitude', 'slewtoazimuth', 'synctoazimuth'):
@@ -364,16 +370,21 @@ class Alpaca:
 
     # Shutter state mapping
     def _get_shutter_state(self):
-        # Map the roof end-stop sensors to the ASCOM ShutterState enum. The
-        # sensors are authoritative for the terminal Open/Closed states; while
-        # the roof is between them we report the direction of the move in
-        # progress (tracked in self._shutter_status).
+        # A tracked move in progress takes precedence over the end-stop sensors:
+        # the origin sensor can stay asserted until the motor physically starts,
+        # so reporting the sensor here would momentarily look like a completed
+        # terminal state. While Opening/Closing the watcher owns the transition
+        # to the terminal value once the target sensor asserts.
+        status = self._shutter_status
+        if status in (SHUTTER_OPENING, SHUTTER_CLOSING):
+            return status
+        # At rest the end-stop sensors are authoritative (this also reflects
+        # motion started outside this Alpaca instance, e.g. via /startstop).
         try:
             open_on = device.Gpio.open.isOn()
             close_on = device.Gpio.close.isOn()
         except Exception:
             return SHUTTER_ERROR
-
         if open_on and close_on:
             # Both sensors active is a fault ("confused") condition.
             return SHUTTER_ERROR
@@ -381,21 +392,31 @@ class Alpaca:
             return SHUTTER_OPEN
         if close_on:
             return SHUTTER_CLOSED
-        # Neither sensor active: the roof is midway. Report the in-progress
-        # direction if a command is running, otherwise flag it as an error.
-        if self._shutter_status in (SHUTTER_OPENING, SHUTTER_CLOSING):
-            return self._shutter_status
+        # Neither sensor active and no tracked move: the roof is stuck midway.
         return SHUTTER_ERROR
 
-    def _start_roof_state_watcher(self, target_sensor, success_fn, action_name):
+    def _start_roof_state_watcher(self, gen, target_sensor, success_fn, action_name):
+        # `gen` tags this watcher with the motion generation it belongs to. If a
+        # newer move (or rollback) bumps self._motion_gen, this watcher becomes
+        # stale and must not touch the shutter state -- otherwise a lingering
+        # opening watcher could fire _on_open_complete during a later close,
+        # cutting roof power and enabling mount power mid-close.
         def watcher():
             deadline = time.time() + ROOF_STATE_TIMEOUT
             while time.time() < deadline:
+                if self._motion_gen != gen:
+                    return  # superseded by a newer move
                 if target_sensor.isOn():
-                    success_fn()
+                    with self._lock:
+                        if self._motion_gen != gen:
+                            return
+                        success_fn()
                     return
                 time.sleep(ROOF_STATE_POLL_INTERVAL)
-            self._shutter_status = SHUTTER_ERROR
+            with self._lock:
+                if self._motion_gen != gen:
+                    return
+                self._shutter_status = SHUTTER_ERROR
             browser.browser.sendNotice(
                 "Timeout waiting for roof {} after {} seconds".format(action_name, ROOF_STATE_TIMEOUT),
                 log='ERROR'
@@ -404,6 +425,9 @@ class Alpaca:
         thread = threading.Thread(target=watcher, daemon=True)
         thread.start()
 
+    # Note: _on_open_complete / _on_close_complete run while self._lock is held
+    # (called from the watcher) so the status update and GPIO actuation are
+    # atomic with respect to command acceptance.
     def _on_open_complete(self):
         self._shutter_status = SHUTTER_OPEN
         browser.browser.sendNotice("Roof open; turning off roof power and enabling mount power", log='INFO')
@@ -418,76 +442,78 @@ class Alpaca:
     def _shutterstatus(self):
         return self._resp(self._get_shutter_state())
 
+    def _slewing(self):
+        # Slewing reports whether any dome component is moving. The roof only
+        # moves while the shutter is opening or closing.
+        return self._resp(self._get_shutter_state() in (SHUTTER_OPENING, SHUTTER_CLOSING))
+
     def _openshutter(self):
         logging.info("Alpaca: OpenShutter requested from %s", flask.request.remote_addr)
-        # If already open, succeed
-        if device.Gpio.open.isOn():
-            self._shutter_status = SHUTTER_OPEN
-            return self._resp()
-
-        # The roof is driven by a single START/STOP toggle, so opening can only
-        # be started safely from the fully-closed state. From any other
-        # position the toggle has no defined direction and could stop or
-        # reverse a roof that is already moving -- including motion started via
-        # the browser /startstop path, before this process restarted, or after
-        # a move watcher timed out, none of which update _shutter_status. A move
-        # already tracked as opening is idempotent; every other non-closed
-        # position is refused rather than guessed at.
-        if self._shutter_status == SHUTTER_OPENING:
-            return self._resp()
-        if not device.Gpio.close.isOn():
-            return self._resp(error_number=1, error_message='Cannot open shutter: roof is not closed (position unknown or in motion)')
-
-        # Require the telescope to be parked before cutting mount power.
-        if (device.Gpio.park.checkParked() != device.park.PARKED):
-            return self._resp(error_number=1, error_message='Cannot open shutter: mount must be parked first')
-
-        # Ensure mount power is off and roof power is on before opening.
-        device.Gpio.mntout.turnOff()
-        device.Gpio.roofout.turnOn()
-
-        # Use the same safety checks as the browser/startStop path by
-        # delegating to browser.startStop which toggles roof appropriately
-        result = browser.browser.startStop(self.app)
-        ok = (result == 'OK')
-        if ok:
-            self._shutter_status = SHUTTER_OPENING
-            self._start_roof_state_watcher(device.Gpio.open, self._on_open_complete, 'open')
-            return self._resp()
-        return self._resp(error_number=1, error_message='Failed to open shutter')
+        return self._begin_move(
+            moving_status=SHUTTER_OPENING, terminal_status=SHUTTER_OPEN,
+            origin_sensor=device.Gpio.close, target_sensor=device.Gpio.open,
+            success_fn=self._on_open_complete, action='open', origin_name='closed', err_no=1)
 
     def _closeshutter(self):
         logging.info("Alpaca: CloseShutter requested from %s", flask.request.remote_addr)
-        # If already closed, succeed
-        if device.Gpio.close.isOn():
-            self._shutter_status = SHUTTER_CLOSED
-            return self._resp()
+        return self._begin_move(
+            moving_status=SHUTTER_CLOSING, terminal_status=SHUTTER_CLOSED,
+            origin_sensor=device.Gpio.open, target_sensor=device.Gpio.close,
+            success_fn=self._on_close_complete, action='close', origin_name='open', err_no=2)
 
-        # Mirror OpenShutter: closing can only be started from the fully-open
-        # state. A matching close already in progress is idempotent; any other
-        # non-open position (midway, in motion, or unknown -- including motion
-        # started outside this Alpaca instance) is refused so the directionless
-        # toggle never stops or reverses a moving roof.
-        if self._shutter_status == SHUTTER_CLOSING:
-            return self._resp()
-        if not device.Gpio.open.isOn():
-            return self._resp(error_number=2, error_message='Cannot close shutter: roof is not open (position unknown or in motion)')
+    def _begin_move(self, moving_status, terminal_status, origin_sensor, target_sensor,
+                    success_fn, action, origin_name, err_no):
+        # Reserve the move atomically *before* any blocking work. The roof is a
+        # single START/STOP toggle with no defined direction from a midway
+        # position, so the acceptance decision and the Opening/Closing
+        # reservation must be one critical section: otherwise an overlapping
+        # retry could pass the guard (because the status was not yet set) and
+        # fire a second toggle that stops the roof.
+        with self._lock:
+            # A matching move is already running -> idempotent success.
+            if self._shutter_status == moving_status:
+                return self._resp()
+            # Already resting at the target end stop -> success.
+            if self._shutter_status not in (SHUTTER_OPENING, SHUTTER_CLOSING) and target_sensor.isOn():
+                self._shutter_status = terminal_status
+                return self._resp()
+            # A move in the other direction is running, or the roof is not
+            # resting at the origin end stop (midway / in motion / unknown):
+            # refuse rather than fire the directionless toggle.
+            if self._shutter_status in (SHUTTER_OPENING, SHUTTER_CLOSING) or not origin_sensor.isOn():
+                return self._resp(
+                    error_number=err_no,
+                    error_message='Cannot {} shutter: roof is not {} (position unknown or in motion)'.format(action, origin_name))
+            # Reserve the move and open a new motion generation, invalidating any
+            # earlier watcher, before releasing the lock for the blocking work.
+            self._shutter_status = moving_status
+            self._motion_gen += 1
+            gen = self._motion_gen
 
-        # Require the telescope to be parked before cutting mount power.
-        if (device.Gpio.park.checkParked() != device.park.PARKED):
-            return self._resp(error_number=2, error_message='Cannot close shutter: mount must be parked first')
+        # Blocking safety checks and actuation happen outside the lock so status
+        # reads are not stalled by the (multi-second) park check.
+        if device.Gpio.park.checkParked() != device.park.PARKED:
+            return self._abort_move(gen, err_no, 'Cannot {} shutter: mount must be parked first'.format(action))
 
-        # Ensure mount power is off and roof power is on before closing.
+        # Ensure mount power is off and roof power is on before moving.
         device.Gpio.mntout.turnOff()
         device.Gpio.roofout.turnOn()
 
-        result = browser.browser.startStop(self.app)
-        ok = (result == 'OK')
-        if ok:
-            self._shutter_status = SHUTTER_CLOSING
-            self._start_roof_state_watcher(device.Gpio.close, self._on_close_complete, 'close')
-            return self._resp()
-        return self._resp(error_number=2, error_message='Failed to close shutter')
+        # Delegate to the same safety-checked toggle path used by the browser.
+        if browser.browser.startStop(self.app) != 'OK':
+            return self._abort_move(gen, err_no, 'Failed to {} shutter'.format(action))
+
+        self._start_roof_state_watcher(gen, target_sensor, success_fn, action)
+        return self._resp()
+
+    def _abort_move(self, gen, err_no, message):
+        # Roll back a reserved-but-unstarted move so the sensors re-derive the
+        # resting state. Guarded by the generation so we never clobber a newer
+        # move that raced in.
+        with self._lock:
+            if self._motion_gen == gen:
+                self._shutter_status = None
+        return self._resp(error_number=err_no, error_message=message)
 
     def _abortslew(self):
         # A roll-off roof cannot honour a remote mid-travel abort: stopping the
