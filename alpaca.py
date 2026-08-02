@@ -10,6 +10,31 @@ false for rotation-related capabilities since the roof does not rotate).
 The class registers Flask routes on construction. It uses the existing
 `browser` and `device` modules to perform actions and to check safety
 conditions used elsewhere in the project.
+
+Interface notes (ASCOM Alpaca compliance)
+-----------------------------------------
+A real ASCOM/Alpaca client (e.g. NINA) requires a specific contract that
+the earlier version of this file did not fully satisfy.  The pieces that
+were folded in from the reference driver (`ALPACA_Dome_Driver-c.py`) are:
+
+* ``CanSetShutter`` returns ``True`` -- a client will not expose the
+  Open/Close Shutter buttons unless the driver advertises this.
+* ``ShutterStatus`` uses the real ASCOM ``ShutterState`` enumeration
+  (0=Open, 1=Closed, 2=Opening, 3=Closing, 4=Error).  The previous code
+  used a home-grown mapping (2=Open) that collides with the ASCOM value
+  for "Opening".
+* ``OpenShutter``/``CloseShutter`` (and ``Connected``/``AbortSlew``) are
+  ASCOM *methods*, invoked with HTTP ``PUT``; parameters such as
+  ``ClientTransactionID`` arrive in the form body rather than the query
+  string.
+* The standard Alpaca management API (``/management/apiversions``,
+  ``/management/v1/description``, ``/management/v1/configureddevices``).
+
+Unlike the reference driver -- which blocks the request with ``sleep()``
+while it fakes roof motion -- ASCOM methods must return promptly and let
+the client poll ``ShutterStatus``.  We keep the project's existing
+non-blocking design: the command starts the roof and a background watcher
+thread updates the tracked status when the roof reaches its end stop.
 """
 
 import json
@@ -31,6 +56,21 @@ DISCOVERY_MULTICAST_GROUP = '239.255.255.250'
 DISCOVERY_MULTICAST_PORT = 32227
 DISCOVERY_RESPONSE_ST = 'urn:schemas-upnp-org:device:Alpaca:1'
 
+# HTTP port the Flask app (and therefore the Alpaca API) listens on. This is
+# what the UDP discovery responder advertises to clients.
+ALPACA_HTTP_PORT = 5000
+
+DRIVER_VERSION = '1.1.0'
+
+# ASCOM ShutterState enumeration (Dome.ShutterStatus). These values are part
+# of the wire protocol -- clients interpret them literally, so they must match
+# the ASCOM standard exactly.
+SHUTTER_OPEN = 0
+SHUTTER_CLOSED = 1
+SHUTTER_OPENING = 2
+SHUTTER_CLOSING = 3
+SHUTTER_ERROR = 4
+
 
 class Alpaca:
     """Register a minimal Alpaca dome controller on a Flask app.
@@ -45,15 +85,23 @@ class Alpaca:
         self.app = app
         self.device_number = int(device_number)
         self.base = base_path.rstrip('/')
+        # Last direction the roof was commanded to move. Used to report
+        # Opening/Closing while the roof is between its end-stop sensors.
+        self._shutter_status = None
         # Register routes
         prefix = self._prefix()
 
         # Core device metadata
-        app.add_url_rule(prefix + '/connected', endpoint=prefix + '_connected', view_func=self._connected, methods=['GET'])
+        app.add_url_rule(prefix + '/connected', endpoint=prefix + '_connected', view_func=self._connected, methods=['GET', 'PUT'])
         app.add_url_rule(prefix + '/name', endpoint=prefix + '_name', view_func=self._name, methods=['GET'])
         app.add_url_rule(prefix + '/description', endpoint=prefix + '_description', view_func=self._description, methods=['GET'])
+        app.add_url_rule(prefix + '/driverinfo', endpoint=prefix + '_driverinfo', view_func=self._driverinfo, methods=['GET'])
+        app.add_url_rule(prefix + '/driverversion', endpoint=prefix + '_driverversion', view_func=self._driverversion, methods=['GET'])
 
-        # Capability flags (we do not support rotation)
+        # Capability flags. The roof is a shutter-only dome: it can set the
+        # shutter but cannot rotate, slave, park or find home.
+        app.add_url_rule(prefix + '/cansetshutter', endpoint=prefix + '_cansetshutter', view_func=self._cansetshutter, methods=['GET'])
+        app.add_url_rule(prefix + '/cansyncazimuth', endpoint=prefix + '_cansyncazimuth', view_func=self._cansyncazimuth, methods=['GET'])
         app.add_url_rule(prefix + '/canrotate', endpoint=prefix + '_canrotate', view_func=self._canrotate, methods=['GET'])
         app.add_url_rule(prefix + '/canpark', endpoint=prefix + '_canpark', view_func=self._canpark, methods=['GET'])
         app.add_url_rule(prefix + '/canfindhome', endpoint=prefix + '_canfindhome', view_func=self._canfindhome, methods=['GET'])
@@ -61,17 +109,24 @@ class Alpaca:
         # Basic discovery / service info (rooted at the base path)
         app.add_url_rule(self.base + '/discovery', endpoint=prefix + '_discovery', view_func=self._discovery, methods=['GET'])
         app.add_url_rule(self.base + '/apiversion', endpoint=prefix + '_apiversion', view_func=self._apiversion, methods=['GET'])
-        # Management endpoints
-        app.add_url_rule(self.base + '/management/apiversions', endpoint=prefix + '_management_apiversions', view_func=self._management_apiversions, methods=['GET'])
-        # Some clients may probe the unprefixed management path; register it too
-        app.add_url_rule('/management/apiversions', endpoint=prefix + '_management_apiversions_unprefixed', view_func=self._management_apiversions, methods=['GET'])
+
+        # Standard Alpaca management API (server-global, rooted at /management)
+        app.add_url_rule('/management/apiversions', endpoint=prefix + '_management_apiversions', view_func=self._management_apiversions, methods=['GET'])
+        app.add_url_rule('/management/v1/description', endpoint=prefix + '_management_description', view_func=self._management_description, methods=['GET'])
+        app.add_url_rule('/management/v1/configureddevices', endpoint=prefix + '_management_configureddevices', view_func=self._configureddevices, methods=['GET'])
+        # Backward-compatible aliases some clients probe under the API base
+        app.add_url_rule(self.base + '/management/apiversions', endpoint=prefix + '_management_apiversions_prefixed', view_func=self._management_apiversions, methods=['GET'])
         app.add_url_rule(self.base + '/configureddevices', endpoint=prefix + '_configureddevices', view_func=self._configureddevices, methods=['GET'])
         self._start_multicast_responder()
 
-        # Shutter control
-        app.add_url_rule(prefix + '/openshutter', endpoint=prefix + '_openshutter', view_func=self._openshutter, methods=['GET','POST'])
-        app.add_url_rule(prefix + '/closeshutter', endpoint=prefix + '_closeshutter', view_func=self._closeshutter, methods=['GET','POST'])
-        app.add_url_rule(prefix + '/shutterstate', endpoint=prefix + '_shutterstate', view_func=self._shutterstate, methods=['GET'])
+        # Shutter control. Open/Close are ASCOM methods invoked with PUT; we
+        # also accept GET/POST so the endpoints can be exercised from a browser.
+        app.add_url_rule(prefix + '/openshutter', endpoint=prefix + '_openshutter', view_func=self._openshutter, methods=['GET', 'POST', 'PUT'])
+        app.add_url_rule(prefix + '/closeshutter', endpoint=prefix + '_closeshutter', view_func=self._closeshutter, methods=['GET', 'POST', 'PUT'])
+        app.add_url_rule(prefix + '/abortslew', endpoint=prefix + '_abortslew', view_func=self._abortslew, methods=['GET', 'POST', 'PUT'])
+        app.add_url_rule(prefix + '/shutterstatus', endpoint=prefix + '_shutterstatus', view_func=self._shutterstatus, methods=['GET'])
+        # Retain the previously-used name as an alias for existing callers.
+        app.add_url_rule(prefix + '/shutterstate', endpoint=prefix + '_shutterstate', view_func=self._shutterstatus, methods=['GET'])
 
     def _prefix(self):
         # e.g. /api/v1/dome/0
@@ -81,18 +136,37 @@ class Alpaca:
         Alpaca.server_txid += 1
         return Alpaca.server_txid
 
+    def _client_txid(self):
+        """Read ClientTransactionID from the query string (GET) or form (PUT)."""
+        for src in (flask.request.args, flask.request.form):
+            raw = src.get('ClientTransactionID')
+            if raw is not None:
+                try:
+                    return int(raw)
+                except (TypeError, ValueError):
+                    return 0
+        return 0
+
     def _resp(self, value=None, error_number=0, error_message=''):
         resp = {
-            'Value': value,
-            'ClientTransactionID': int(flask.request.args.get('ClientTransactionID', 0)),
+            'ClientTransactionID': self._client_txid(),
             'ServerTransactionID': self._next_txid(),
             'ErrorNumber': int(error_number),
             'ErrorMessage': error_message,
         }
+        # ASCOM property reads carry a Value; method (PUT) responses do not.
+        if value is not None:
+            resp['Value'] = value
         return flask.jsonify(resp)
 
     # Core info endpoints
     def _connected(self):
+        # A client "connects" by PUTting Connected=true. We are stateless and
+        # always available, so we simply acknowledge the request.
+        if flask.request.method == 'PUT':
+            state = flask.request.form.get('Connected', 'false').lower() == 'true'
+            logging.info('Alpaca: client set Connected=%s', state)
+            return self._resp()
         return self._resp(True)
 
     def _name(self):
@@ -101,7 +175,20 @@ class Alpaca:
     def _description(self):
         return self._resp('T-Rax roll-off roof presented as an Alpaca dome (shutter only)')
 
+    def _driverinfo(self):
+        return self._resp('T-Rax Alpaca dome bridge to the roll-off roof controller')
+
+    def _driverversion(self):
+        return self._resp(DRIVER_VERSION)
+
     # Capability endpoints
+    def _cansetshutter(self):
+        # The roof *is* the shutter, so we can open and close it.
+        return self._resp(True)
+
+    def _cansyncazimuth(self):
+        return self._resp(False)
+
     def _canrotate(self):
         return self._resp(False)
 
@@ -125,7 +212,7 @@ class Alpaca:
             'Vendor': 'Robert Ferguson Observatory',
             'Manufacturer': 'Robert Ferguson Observatory',
             'IPAddress': ip_address,
-            'HTTPPort': 5000,
+            'HTTPPort': ALPACA_HTTP_PORT,
             'SupportedApiVersions': [1],
             'Description': 'ASCOM Alpaca dome shutter interface',
         }
@@ -147,32 +234,35 @@ class Alpaca:
         return self._resp(self._apiversion_data())
 
     def _management_apiversions(self):
-        """Return list of supported API versions for management discovery."""
-        try:
-            return flask.jsonify([self._apiversion_data()])
-        except Exception as e:
-            logging.error('Failed to produce management apiversions response: %s', e)
-            return flask.jsonify([])
+        """Return list of supported Alpaca API versions (management discovery)."""
+        return self._resp([1])
+
+    def _management_description(self):
+        """Return the server description block for management discovery."""
+        return self._resp({
+            'ServerName': 'T-Rax',
+            'Manufacturer': 'Robert Ferguson Observatory',
+            'ManufacturerVersion': DRIVER_VERSION,
+            'Location': 'RFO, Kenwood CA',
+        })
 
     def _configureddevices(self):
         # Return list of configured devices on this server
         devices = [
             {
-                'DeviceType': 'dome',
-                'DeviceNumber': self.device_number,
                 'DeviceName': 'T-Rax Roof Dome',
+                'DeviceType': 'Dome',
+                'DeviceNumber': self.device_number,
                 'UniqueID': 'uuid:trax:dome:{}'.format(self.device_number),
             }
         ]
         return self._resp(devices)
 
     def _format_discovery_response(self, client_addr):
-        # Return a JSON-encoded discovery payload per the Alpaca discovery specification.
-        # Use the same structure as the HTTP discovery endpoint, but encoded as JSON
-        # so UDP responders expecting Alpaca JSON will receive the expected format.
+        # Per the Alpaca discovery specification the UDP reply is a small JSON
+        # document naming the HTTP port the Alpaca API is served on.
         try:
-            # Per request, only advertise the Alpaca HTTP port in the UDP response
-            payload = {'AlpacaPort': 5000}
+            payload = {'AlpacaPort': ALPACA_HTTP_PORT}
             return json.dumps(payload).encode('utf-8')
         except Exception as e:
             logging.error('Failed to format JSON discovery response: %s', e)
@@ -205,9 +295,10 @@ class Alpaca:
                 if not data:
                     continue
                 text = data.decode('utf-8', errors='ignore')
-                # Respond to common discovery probes. Accept multicast-style M-SEARCH
-                # as well as simple broadcast discovery strings.
-                if 'M-SEARCH' in text or 'ALPACA_DISCOVERY' in text.upper() or 'DISCOVERY' in text.upper():
+                # The official Alpaca discovery probe is the ASCII string
+                # "alpacadiscovery1". Also accept the legacy SSDP-style probes.
+                upper = text.upper()
+                if 'ALPACADISCOVERY' in upper or 'M-SEARCH' in upper or 'DISCOVERY' in upper:
                     logging.info('Received discovery request from %s', addr)
                     response = self._format_discovery_response(addr)
                     sock.sendto(response, addr)
@@ -220,19 +311,28 @@ class Alpaca:
 
     # Shutter state mapping
     def _get_shutter_state(self):
-        # Map existing roof indicators to simple shutter states:
-        # 0 = ShutterUnknown, 1 = ShutterClosed, 2 = ShutterOpen, 3 = ShutterMoving
+        # Map the roof end-stop sensors to the ASCOM ShutterState enum. The
+        # sensors are authoritative for the terminal Open/Closed states; while
+        # the roof is between them we report the direction of the move in
+        # progress (tracked in self._shutter_status).
         try:
-            if device.Gpio.close.isOn() and device.Gpio.open.isOn():
-                return 0
-            elif device.Gpio.close.isOn():
-                return 1
-            elif device.Gpio.open.isOn():
-                return 2
-            else:
-                return 3
+            open_on = device.Gpio.open.isOn()
+            close_on = device.Gpio.close.isOn()
         except Exception:
-            return 0
+            return SHUTTER_ERROR
+
+        if open_on and close_on:
+            # Both sensors active is a fault ("confused") condition.
+            return SHUTTER_ERROR
+        if open_on:
+            return SHUTTER_OPEN
+        if close_on:
+            return SHUTTER_CLOSED
+        # Neither sensor active: the roof is midway. Report the in-progress
+        # direction if a command is running, otherwise flag it as an error.
+        if self._shutter_status in (SHUTTER_OPENING, SHUTTER_CLOSING):
+            return self._shutter_status
+        return SHUTTER_ERROR
 
     def _start_roof_state_watcher(self, target_sensor, success_fn, action_name):
         def watcher():
@@ -242,6 +342,7 @@ class Alpaca:
                     success_fn()
                     return
                 time.sleep(ROOF_STATE_POLL_INTERVAL)
+            self._shutter_status = SHUTTER_ERROR
             browser.browser.sendNotice(
                 "Timeout waiting for roof {} after {} seconds".format(action_name, ROOF_STATE_TIMEOUT),
                 log='ERROR'
@@ -251,26 +352,29 @@ class Alpaca:
         thread.start()
 
     def _on_open_complete(self):
+        self._shutter_status = SHUTTER_OPEN
         browser.browser.sendNotice("Roof open; turning off roof power and enabling mount power", log='INFO')
         device.Gpio.roofout.turnOff()
         device.Gpio.mntout.turnOn()
 
     def _on_close_complete(self):
+        self._shutter_status = SHUTTER_CLOSED
         browser.browser.sendNotice("Roof closed; turning off roof power", log='INFO')
         device.Gpio.roofout.turnOff()
 
-    def _shutterstate(self):
+    def _shutterstatus(self):
         return self._resp(self._get_shutter_state())
 
     def _openshutter(self):
         logging.info("Alpaca: OpenShutter requested from %s", flask.request.remote_addr)
         # If already open, succeed
         if device.Gpio.open.isOn():
-            return self._resp(True)
+            self._shutter_status = SHUTTER_OPEN
+            return self._resp()
 
         # Require the telescope to be parked before cutting mount power.
         if (device.Gpio.park.checkParked() != device.park.PARKED):
-            return self._resp(False, 1, 'Cannot open shutter: mount must be parked first')
+            return self._resp(error_number=1, error_message='Cannot open shutter: mount must be parked first')
 
         # Ensure mount power is off and roof power is on before opening.
         device.Gpio.mntout.turnOff()
@@ -281,18 +385,21 @@ class Alpaca:
         result = browser.browser.startStop(self.app)
         ok = (result == 'OK')
         if ok:
+            self._shutter_status = SHUTTER_OPENING
             self._start_roof_state_watcher(device.Gpio.open, self._on_open_complete, 'open')
-        return self._resp(ok, 0 if ok else 1, '' if ok else 'Failed to open shutter')
+            return self._resp()
+        return self._resp(error_number=1, error_message='Failed to open shutter')
 
     def _closeshutter(self):
         logging.info("Alpaca: CloseShutter requested from %s", flask.request.remote_addr)
         # If already closed, succeed
         if device.Gpio.close.isOn():
-            return self._resp(True)
+            self._shutter_status = SHUTTER_CLOSED
+            return self._resp()
 
         # Require the telescope to be parked before cutting mount power.
         if (device.Gpio.park.checkParked() != device.park.PARKED):
-            return self._resp(False, 2, 'Cannot close shutter: mount must be parked first')
+            return self._resp(error_number=2, error_message='Cannot close shutter: mount must be parked first')
 
         # Ensure mount power is off and roof power is on before closing.
         device.Gpio.mntout.turnOff()
@@ -301,8 +408,19 @@ class Alpaca:
         result = browser.browser.startStop(self.app)
         ok = (result == 'OK')
         if ok:
+            self._shutter_status = SHUTTER_CLOSING
             self._start_roof_state_watcher(device.Gpio.close, self._on_close_complete, 'close')
-        return self._resp(ok, 0 if ok else 2, '' if ok else 'Failed to close shutter')
+            return self._resp()
+        return self._resp(error_number=2, error_message='Failed to close shutter')
+
+    def _abortslew(self):
+        # A roll-off roof should not be halted mid-travel from a remote client:
+        # stopping the motor between end stops leaves the observatory exposed
+        # and defeats the safety interlocks. We acknowledge the ASCOM method so
+        # clients do not error, but take no action. Use the physical Emergency
+        # Stop control for a genuine emergency halt.
+        logging.info("Alpaca: AbortSlew requested from %s (no-op for roll-off roof)", flask.request.remote_addr)
+        return self._resp()
 
 
 # If the module is imported, user can create an Alpaca instance. When run
