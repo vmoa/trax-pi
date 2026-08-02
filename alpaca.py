@@ -149,8 +149,6 @@ class Alpaca:
         app.add_url_rule(prefix + '/closeshutter', endpoint=prefix + '_closeshutter', view_func=self._closeshutter, methods=['GET', 'POST', 'PUT'])
         app.add_url_rule(prefix + '/abortslew', endpoint=prefix + '_abortslew', view_func=self._abortslew, methods=['GET', 'POST', 'PUT'])
         app.add_url_rule(prefix + '/shutterstatus', endpoint=prefix + '_shutterstatus', view_func=self._shutterstatus, methods=['GET'])
-        # Retain the previously-used name as an alias for existing callers.
-        app.add_url_rule(prefix + '/shutterstate', endpoint=prefix + '_shutterstate', view_func=self._shutterstatus, methods=['GET'])
 
     def _prefix(self):
         # e.g. /api/v1/dome/0
@@ -481,13 +479,14 @@ class Alpaca:
         return self._resp(error_number=2, error_message='Failed to close shutter')
 
     def _abortslew(self):
-        # A roll-off roof should not be halted mid-travel from a remote client:
-        # stopping the motor between end stops leaves the observatory exposed
-        # and defeats the safety interlocks. We acknowledge the ASCOM method so
-        # clients do not error, but take no action. Use the physical Emergency
-        # Stop control for a genuine emergency halt.
-        logging.info("Alpaca: AbortSlew requested from %s (no-op for roll-off roof)", flask.request.remote_addr)
-        return self._resp()
+        # A roll-off roof cannot honour a remote mid-travel abort: stopping the
+        # motor between end stops leaves the observatory exposed and defeats the
+        # safety interlocks. Rather than falsely report that motion stopped,
+        # return an explicit "not implemented" error so a caller cannot act on a
+        # bogus success. Use the physical Emergency Stop control for a genuine
+        # emergency halt.
+        logging.info("Alpaca: AbortSlew requested from %s (not implemented for roll-off roof)", flask.request.remote_addr)
+        return self._resp(error_number=NOT_IMPLEMENTED, error_message='AbortSlew is not implemented for a roll-off roof')
 
 
 # If the module is imported, user can create an Alpaca instance. When run

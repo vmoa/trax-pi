@@ -132,8 +132,6 @@ def test_ascom_contract():
     # Roof is CLOSED in the fixture -> ASCOM ShutterState 1 (shutterClosed).
     status = client.get('/api/v1/dome/0/shutterstatus').get_json()
     assert status['Value'] == alpaca.SHUTTER_CLOSED == 1, status
-    # Legacy alias resolves to the same handler/value.
-    assert client.get('/api/v1/dome/0/shutterstate').get_json()['Value'] == 1
 
     # Management API returns the standard shapes.
     assert client.get('/management/apiversions').get_json()['Value'] == [1]
@@ -149,9 +147,12 @@ def test_ascom_contract():
     assert body['ErrorNumber'] == 0, body
     assert body['ClientTransactionID'] == 42, body
 
-    # CloseShutter and AbortSlew are likewise PUT methods that succeed.
+    # CloseShutter is likewise a PUT method that succeeds.
     assert client.put('/api/v1/dome/0/closeshutter').get_json()['ErrorNumber'] == 0
-    assert client.put('/api/v1/dome/0/abortslew').get_json()['ErrorNumber'] == 0
+    # AbortSlew cannot be honoured on a roll-off roof, so it must report an
+    # explicit not-implemented error rather than a false success.
+    abort = client.put('/api/v1/dome/0/abortslew').get_json()
+    assert abort['ErrorNumber'] == alpaca.NOT_IMPLEMENTED and 'Value' not in abort, abort
 
     # Connected accepts a PUT to set the connection state.
     assert client.put('/api/v1/dome/0/connected', data={'Connected': 'true'}).status_code == 200

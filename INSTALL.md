@@ -103,8 +103,8 @@ curl http://<host>:5000/api/v1/dome/0/openshutter
 # Close shutter
 curl http://<host>:5000/api/v1/dome/0/closeshutter
 
-# Query shutter state
-curl http://<host>:5000/api/v1/dome/0/shutterstate
+# Query shutter status (ASCOM ShutterState enum: 0=Open, 1=Closed, 2=Opening, 3=Closing, 4=Error)
+curl http://<host>:5000/api/v1/dome/0/shutterstatus
 ```
 
 The API returns JSON in the Alpaca format with `Value`, `ClientTransactionID`, `ServerTransactionID`, `ErrorNumber`, and `ErrorMessage` fields.
