@@ -248,6 +248,47 @@ def test_motion_generation():
     print('Motion generation test passed')
 
 
+def test_reservation_rollback_and_pending():
+    """A reserved move must roll back on failure and not ack duplicates while pending."""
+    device.Gpio = SimpleNamespace(
+        open=DummySensor(False), close=DummySensor(True),
+        park=SimpleNamespace(checkParked=(lambda: device.park.PARKED)),
+        mntout=SimpleNamespace(turnOff=(lambda: None), turnOn=(lambda: None)),
+        roofout=SimpleNamespace(turnOn=(lambda: None), turnOff=(lambda: None)),
+    )
+    alpaca.Alpaca._start_multicast_responder = lambda self: None
+    alpaca.Alpaca._start_roof_state_watcher = lambda self, gen, *a: None
+    browser.browser.startStop = lambda app: 'OK'
+
+    app = Flask(__name__)
+    inst = alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
+    client = app.test_client()
+
+    # A duplicate arriving while the first move is still pending (preflight not
+    # confirmed) must NOT be acknowledged as a started move.
+    inst._shutter_status = alpaca.SHUTTER_OPENING
+    inst._move_pending = True
+    assert client.put('/api/v1/dome/0/openshutter').get_json()['ErrorNumber'] == 1
+    inst._shutter_status = None
+    inst._move_pending = False
+
+    # A failed startStop rolls the reservation back so status is not stuck Opening.
+    browser.browser.startStop = lambda app: 'ERROR'
+    body = client.put('/api/v1/dome/0/openshutter').get_json()
+    assert body['ErrorNumber'] == 1, body
+    assert inst._shutter_status is None and inst._move_pending is False
+
+    # An exception during preflight also rolls back rather than leaking state.
+    def boom():
+        raise RuntimeError('gpio fault')
+    device.Gpio.park = SimpleNamespace(checkParked=boom)
+    body = client.put('/api/v1/dome/0/openshutter').get_json()
+    assert body['ErrorNumber'] == 1, body
+    assert inst._shutter_status is None and inst._move_pending is False
+
+    print('Reservation rollback/pending test passed')
+
+
 def test_discovery_response_format():
     """The UDP discovery reply is JSON naming the Alpaca HTTP port."""
     original_start = alpaca.Alpaca._start_multicast_responder
@@ -269,4 +310,5 @@ if __name__ == '__main__':
     test_ascom_contract()
     test_shutter_command_guards()
     test_motion_generation()
+    test_reservation_rollback_and_pending()
     test_discovery_response_format()

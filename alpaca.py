@@ -96,6 +96,9 @@ class Alpaca:
         self._shutter_status = None
         self._lock = threading.Lock()
         self._motion_gen = 0
+        # True while a move is reserved but its preflight (park check + toggle)
+        # has not yet confirmed the roof is actually moving.
+        self._move_pending = False
         # Register routes
         prefix = self._prefix()
 
@@ -470,9 +473,17 @@ class Alpaca:
         # retry could pass the guard (because the status was not yet set) and
         # fire a second toggle that stops the roof.
         with self._lock:
-            # A matching move is already running -> idempotent success.
+            # A matching move is already tracked.
             if self._shutter_status == moving_status:
-                return self._resp()
+                if self._move_pending:
+                    # Reserved, but its preflight has not confirmed the roof is
+                    # moving yet -- and it may still fail (unparked mount, failed
+                    # toggle) and roll back. Do not acknowledge a duplicate as a
+                    # started move; report that a command is already in progress.
+                    return self._resp(
+                        error_number=err_no,
+                        error_message='Cannot {} shutter: a shutter move is already in progress'.format(action))
+                return self._resp()  # confirmed in-flight -> idempotent success
             # Already resting at the target end stop -> success.
             if self._shutter_status not in (SHUTTER_OPENING, SHUTTER_CLOSING) and target_sensor.isOn():
                 self._shutter_status = terminal_status
@@ -484,27 +495,41 @@ class Alpaca:
                 return self._resp(
                     error_number=err_no,
                     error_message='Cannot {} shutter: roof is not {} (position unknown or in motion)'.format(action, origin_name))
-            # Reserve the move and open a new motion generation, invalidating any
-            # earlier watcher, before releasing the lock for the blocking work.
+            # Reserve the move (pending until actuation confirms) and open a new
+            # motion generation, invalidating any earlier watcher, before
+            # releasing the lock for the blocking work.
             self._shutter_status = moving_status
+            self._move_pending = True
             self._motion_gen += 1
             gen = self._motion_gen
 
         # Blocking safety checks and actuation happen outside the lock so status
-        # reads are not stalled by the (multi-second) park check.
-        if device.Gpio.park.checkParked() != device.park.PARKED:
-            return self._abort_move(gen, err_no, 'Cannot {} shutter: mount must be parked first'.format(action))
+        # reads are not stalled by the (multi-second) park check. Any failure or
+        # exception must roll the reservation back, otherwise the instance would
+        # report Opening/Closing forever and reject every later command.
+        try:
+            if device.Gpio.park.checkParked() != device.park.PARKED:
+                return self._abort_move(gen, err_no, 'Cannot {} shutter: mount must be parked first'.format(action))
 
-        # Ensure mount power is off and roof power is on before moving.
-        device.Gpio.mntout.turnOff()
-        device.Gpio.roofout.turnOn()
+            # Ensure mount power is off and roof power is on before moving.
+            device.Gpio.mntout.turnOff()
+            device.Gpio.roofout.turnOn()
 
-        # Delegate to the same safety-checked toggle path used by the browser.
-        if browser.browser.startStop(self.app) != 'OK':
-            return self._abort_move(gen, err_no, 'Failed to {} shutter'.format(action))
+            # Delegate to the same safety-checked toggle path used by the browser.
+            if browser.browser.startStop(self.app) != 'OK':
+                return self._abort_move(gen, err_no, 'Failed to {} shutter'.format(action))
 
-        self._start_roof_state_watcher(gen, target_sensor, success_fn, action)
-        return self._resp()
+            # Actuation confirmed: promote from pending to an active move (under
+            # the generation guard) and start the watcher.
+            with self._lock:
+                if self._motion_gen != gen:
+                    return self._resp()  # superseded during preflight
+                self._move_pending = False
+            self._start_roof_state_watcher(gen, target_sensor, success_fn, action)
+            return self._resp()
+        except Exception as e:
+            logging.error('Alpaca: %s shutter failed: %s', action, e)
+            return self._abort_move(gen, err_no, 'Failed to {} shutter: {}'.format(action, e))
 
     def _abort_move(self, gen, err_no, message):
         # Roll back a reserved-but-unstarted move so the sensors re-derive the
@@ -513,6 +538,7 @@ class Alpaca:
         with self._lock:
             if self._motion_gen == gen:
                 self._shutter_status = None
+                self._move_pending = False
         return self._resp(error_number=err_no, error_message=message)
 
     def _abortslew(self):
