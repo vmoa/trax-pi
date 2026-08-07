@@ -38,7 +38,11 @@ The overall software design is driven through interrupts -- there is no "main lo
 On start, the server sets  up logging, initializes each of the
 GPIO pins, registers the web interface callbacks, then hands operation over to Flask to listen for incoming requests.
 
-A separate bridge in `alpaca.py` exposes a minimal ASCOM Alpaca dome/shutter interface for automation clients. It accepts `OpenShutter` and `CloseShutter` commands, reports `ShutterStatus`, and keeps control logic consistent with the browser UI by routing Alpaca actuation through the same safety-checked roof toggle path.
+A separate bridge in `alpaca.py` exposes a minimal ASCOM Alpaca dome/shutter interface for automation clients. It accepts
+`OpenShutter` and `CloseShutter` commands, reports `ShutterStatus`, and keeps control logic consistent with the browser
+UI by routing Alpaca actuation through the same safety-checked roof toggle path.  Many thanks to
+[Lena](https://github.com/lena-allie) for her [contributions](https://github.com/elenasch-playground/trax-pi/pull/1)
+to the Alpaca driver.
 
 There are three flavors of threads:
 
