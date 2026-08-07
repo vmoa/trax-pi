@@ -22,11 +22,15 @@ import device
 import test_mode
 import util
 import sse
+import alpaca
 
 import flask
 app = flask.Flask(__name__)
 
-version = 'v1.0.8'      # T-Rax version
+# Register minimal Alpaca dome interface (shutter-only)
+alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
+
+version = 'v1.1.0'      # T-Rax version
 statusInterval = 60     # Seconds between status updates without input changes
 lockfile = 0            # Global so when we lock we keep it
 lockfilename = '/tmp/trax.lock'
@@ -68,6 +72,21 @@ def initialize():
     else:
         loggingConfig['filename'] = args.logfile if args.logfile else default_logfile;
     logging.basicConfig(**loggingConfig)
+    logging.basicConfig(**loggingConfig)
+    # Ensure DEBUG logs actually appear when requested: set root and common
+    # framework loggers to DEBUG when `--debug` is used.
+    if (args.debug):
+        logging.getLogger().setLevel(logging.DEBUG)
+        try:
+            logging.getLogger('werkzeug').setLevel(logging.DEBUG)
+        except Exception:
+            pass
+        try:
+            logging.getLogger('flask.app').setLevel(logging.DEBUG)
+        except Exception:
+            pass
+        logging.debug('Debug logging enabled')
+
     logging.info("Initializing T-Rax for the Raspberry Pi {}".format(version))
     if (args.simulator):
         logging.info("Adjusting timings for simulator")

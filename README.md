@@ -6,10 +6,7 @@ This is the Raspberry Pi implementation of the T-Rax roof controller for the Rob
 This design is a logical follow-on to the [Arduino T-Rax](https://github.com/votmoa/trax-arduino) roof controller
 created back in 2017 by Jim Finn, David Kensiski and Jay Pacheco.  The switch to the Raspberry Pi was driven by the desire
 to implement an [ASCOM Alpaca](https://ascom-standards.org/Developer/Alpaca.htm) interface so that the roof
-can be opened via automation through tools such as [ACP](https://acpx.dc3.com/).
-
-Note that version 1 will simply replace the Arduino functionality.  The ASCOM Alpaca interface will not be
-available unitl version 2.
+can be opened via automation through tools such as [NINA](https://nighttime-imaging.eu/) and the now defunct [ACP](https://acpx.dc3.com/)
 
 Testing insturctions can be found in the [test plan](doc/TestPlan.md) document.
 
@@ -40,6 +37,13 @@ Cascading Style Sheets ([CSS](https://www.w3schools.com/css/default.asp)) to con
 The overall software design is driven through interrupts -- there is no "main loop" as there was in the Arduino.
 On start, the server sets  up logging, initializes each of the
 GPIO pins, registers the web interface callbacks, then hands operation over to Flask to listen for incoming requests.
+
+A separate bridge in `alpaca.py` exposes a minimal ASCOM Alpaca dome/shutter interface for automation clients. It accepts
+`OpenShutter` and `CloseShutter` commands, reports `ShutterStatus`, and keeps control logic consistent with the browser
+UI by routing Alpaca actuation through the same safety-checked roof toggle path.  Many thanks to
+[Lena](https://github.com/lena-allie) for her [contributions](https://github.com/elenasch-playground/trax-pi/pull/1)
+to the Alpaca driver.
+
 There are three flavors of threads:
 
 * Hardware input state changes trigger GPI Zero callbacks that execute in individual threads.
@@ -77,21 +81,17 @@ page to act as a hardbeat to confirm the server/browser SSE channel is active
 
 # Software Design
 
-* TODO: Flesh this out
+The T-Rax software is structured around a Flask-based HTTP interface, GPIO abstractions, and a small set of cooperating threads.
 
-* Hardware Interrupt driven
-* Each input has a callback
-* Wrapper around gpiozero to track output changes
+* `trax.py` is the entry point. It initializes logging, constructs the GPIO objects, starts the periodic update thread, and registers the Flask routes for browser and Alpaca clients.
+* `device.py` wraps `gpiozero` inputs and outputs in `Sensor` and `Control` classes. Inputs are configured with callbacks, and outputs include toggle timing and fob motion retry logic.
+* `browser.py` implements the web UI callbacks. Each browser action checks safety interlocks, performs the required GPIO actuation, and sends status updates to the browser via SSE.
+* `alpaca.py` implements a minimal ASCOM/Alpaca dome/shutter interface. It exposes `OpenShutter`, `CloseShutter`, `ShutterStatus`, discovery, and management endpoints while reusing the same roof safety and toggle logic as the browser UI.
+* `sse.py` manages the server-sent event channel. The browser connects to `/connect` and receives live indicator updates, notices, and status changes.
+* `test_mode.py` provides GPIO stubs for non-Pi environments so the software can run and be tested on a regular development machine.
+* A recurring per-second housekeeping thread updates the browser clock, logs status, and handles timeouts (like laser auto-off).
 
-* Browser
-* calls links that trigger functions to perform operations
-* Check safety logic, trigger outputs
-* Send SSE
-* Javascript paints browser
-
-* Buttons are (actually `<DIV>` onClick actions)
-
-* Update thread 
+Roof motion is coordinated by safety checks on building power, roof power, weather, mount park state, and the open/closed end-stop sensors. Both browser commands and Alpaca `OpenShutter`/`CloseShutter` flows delegate to the same underlying roof toggle path to keep behavior consistent.
 
 # Hardware Design
 
