@@ -52,6 +52,7 @@ import util
 
 ROOF_STATE_TIMEOUT = 30
 ROOF_STATE_POLL_INTERVAL = 0.5
+ROOF_POWER_SETTLE_DELAY = 1.0
 DISCOVERY_MULTICAST_GROUP = '239.255.255.250'
 DISCOVERY_MULTICAST_PORT = 32227
 DISCOVERY_RESPONSE_ST = 'urn:schemas-upnp-org:device:Alpaca:1'
@@ -525,6 +526,9 @@ class Alpaca:
             # Ensure mount power is off and roof power is on before moving.
             device.Gpio.mntout.turnOff()
             device.Gpio.roofout.turnOn()
+            if ROOF_POWER_SETTLE_DELAY > 0:
+                logging.info('Alpaca: waiting %.1f seconds for roof power relays to settle before toggling roof', ROOF_POWER_SETTLE_DELAY)
+                time.sleep(ROOF_POWER_SETTLE_DELAY)
 
             # Delegate to the same safety-checked toggle path used by the browser.
             if browser.browser.startStop(self.app) != 'OK':

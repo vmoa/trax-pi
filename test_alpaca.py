@@ -337,6 +337,44 @@ def test_watcher_failure_modes():
     print('Watcher failure-mode test passed')
 
 
+def test_open_shutter_waits_after_roof_power_on():
+    """A roof-power enable should settle before the fob toggle is issued."""
+    device.Gpio = SimpleNamespace(
+        open=DummySensor(False), close=DummySensor(True),
+        park=SimpleNamespace(checkParked=(lambda: device.park.PARKED)),
+        mntout=SimpleNamespace(turnOff=(lambda: None), turnOn=(lambda: None)),
+        roofout=SimpleNamespace(turnOn=(lambda: None), turnOff=(lambda: None)),
+    )
+    events = []
+    def fake_turn_on():
+        events.append('roofout_on')
+    device.Gpio.roofout.turnOn = fake_turn_on
+
+    def fake_start_stop(app):
+        events.append('startStop')
+        return 'OK'
+    browser.browser.startStop = fake_start_stop
+    alpaca.Alpaca._start_multicast_responder = lambda self: None
+    alpaca.Alpaca._start_roof_state_watcher = lambda self, gen, *a: None
+
+    original_sleep = alpaca.time.sleep
+    def fake_sleep(seconds):
+        events.append(('sleep', seconds))
+    alpaca.time.sleep = fake_sleep
+
+    try:
+        app = Flask(__name__)
+        inst = alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
+        client = app.test_client()
+        body = client.put('/api/v1/dome/0/openshutter').get_json()
+        assert body['ErrorNumber'] == 0, body
+        assert events[:3] == ['roofout_on', ('sleep', alpaca.ROOF_POWER_SETTLE_DELAY), 'startStop'], events
+    finally:
+        alpaca.time.sleep = original_sleep
+
+    print('OpenShutter relay delay test passed')
+
+
 def test_discovery_response_format():
     """The UDP discovery reply is JSON naming the Alpaca HTTP port."""
     original_start = alpaca.Alpaca._start_multicast_responder
