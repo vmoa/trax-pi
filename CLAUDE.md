@@ -33,6 +33,7 @@ The app is fully interrupt-driven — no main polling loop. GPIO state changes a
 - **`trax.py`** — entry point; acquires lock file (`/tmp/trax.lock` — prevents duplicate instances), configures logging, starts the update thread, then hands off to Flask on port 5000
 - **`device.py`** — GPIO abstraction via `gpiozero`; `newSensor()` / `newControl()` wrappers; safety interlock logic (weather, building power, park detector)
 - **`browser.py`** — Flask route handlers; each UI button maps to a URI that checks safety interlocks, triggers GPIO outputs, then fires an SSE event
+- **`alpaca.py`** — ASCOM Alpaca bridge for dome/shutter control; exposes `OpenShutter`/`CloseShutter`, `ShutterStatus`, discovery and status endpoints, and reuses the browser safety logic for roof motion
 - **`sse.py`** — Server-Sent Events channel; browser connects to `/connect` and receives push updates; Flask handler threads write events that the SSE thread broadcasts
 - **`test_mode.py`** — stubs for `gpiozero` that allow running on non-Pi hardware
 - **`util.py`** — shared helpers
