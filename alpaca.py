@@ -55,7 +55,6 @@ ROOF_STATE_POLL_INTERVAL = 0.5
 ROOF_POWER_SETTLE_DELAY = 1.0
 DISCOVERY_MULTICAST_GROUP = '239.255.255.250'
 DISCOVERY_MULTICAST_PORT = 32227
-DISCOVERY_RESPONSE_ST = 'urn:schemas-upnp-org:device:Alpaca:1'
 
 # HTTP port the Flask app (and therefore the Alpaca API) listens on. This is
 # what the UDP discovery responder advertises to clients.
