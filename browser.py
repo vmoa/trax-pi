@@ -107,20 +107,25 @@ class Browser:
                                 device.Gpio.fob.toggleFob()
                                 return "OK"
                             else:
-                                self.sendNotice("Cannot open roof: Weather not OK", log='ERROR')
-                                return "ERROR"
+                                msg = "Cannot open roof: Weather not OK"
+                                self.sendNotice(msg, log='ERROR')
+                                return msg
                         else:
-                            self.sendNotice("Cannot open roof: Mount power is on", log='ERROR')
-                            return "ERROR"
+                            msg = "Cannot open roof: Mount power is on"
+                            self.sendNotice(msg, log='ERROR')
+                            return msg
                     else:
-                        self.sendNotice("Cannot open roof: Mount must be parked first", log='ERROR')
-                        return "ERROR"
+                        msg = "Cannot open roof: Mount must be parked first"
+                        self.sendNotice(msg, log='ERROR')
+                        return msg
                 else:
-                    self.sendNotice("Cannot open roof: roof power is not on", log='ERROR')
-                    return "ERROR"
+                    msg = "Cannot open roof: roof power is not on"
+                    self.sendNotice(msg, log='ERROR')
+                    return msg
             else:
-                self.sendNotice("Cannot open roof: building power has failed", log='ERROR')
-                return "ERROR"
+                msg = "Cannot open roof: building power has failed"
+                self.sendNotice(msg, log='ERROR')
+                return msg
 
         # Close logic -- roof is open
         elif (device.Gpio.open.isOn()):
@@ -131,14 +136,17 @@ class Browser:
                         device.Gpio.fob.toggleFob()
                         return "OK"
                     else:
-                        self.sendNotice("Cannot close roof: mount power is on", log='ERROR')
-                        return "ERROR"
+                        msg = "Cannot close roof: mount power is on"
+                        self.sendNotice(msg, log='ERROR')
+                        return msg
                 else:
-                    self.sendNotice("Cannot close roof: mount must be parked first", log='ERROR')
-                    return "ERROR"
+                    msg = "Cannot close roof: mount must be parked first"
+                    self.sendNotice(msg, log='ERROR')
+                    return msg
             else:
-                self.sendNotice("Cannot close roof: roof power is not on", log='ERROR')
-                return "ERROR"
+                msg = "Cannot close roof: roof power is not on"
+                self.sendNotice(msg, log='ERROR')
+                return msg
 
         # Midway logic -- neither open nor closed
         else:
