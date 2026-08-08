@@ -3,6 +3,7 @@
 # Callbacks are registered in trax.py because it just makes flask cleaner
 
 import flask
+import hashlib
 import logging
 import re
 import threading
@@ -11,15 +12,40 @@ import time
 import device
 import sse
 
+OVERRIDE_PASSWD_FILE = '/etc/trax/override.passwd'
+
 
 class Browser:
 
     emergencyOverride = 0
     version = "unknown"  # Will be set at startup
+    _override_hash = None  # SHA-256 hex digest loaded from OVERRIDE_PASSWD_FILE
 
     def setVersion(self, version):
         """Set the version so browser callbacks can report it"""
         self.version = version
+        self._init_override_password()
+
+    def _init_override_password(self):
+        """Load the override password hash from OVERRIDE_PASSWD_FILE.
+
+        The file must contain a single SHA-256 hex digest (64 lowercase hex chars).
+        Generate one with:
+            python3 -c "import hashlib; print(hashlib.sha256(b'yourpassword').hexdigest())"
+        If the file is absent or malformed, override mode is disabled entirely.
+        """
+        try:
+            with open(OVERRIDE_PASSWD_FILE) as f:
+                h = f.read().strip().lower()
+            if len(h) == 64 and all(c in '0123456789abcdef' for c in h):
+                Browser._override_hash = h
+                logging.info('Override password loaded from %s', OVERRIDE_PASSWD_FILE)
+            else:
+                logging.warning('Override password file %s is malformed; override disabled', OVERRIDE_PASSWD_FILE)
+        except FileNotFoundError:
+            logging.warning('Override password file %s not found; override disabled', OVERRIDE_PASSWD_FILE)
+        except OSError as e:
+            logging.warning('Cannot read override password file: %s; override disabled', e)
 
     def sendNotice(self, msg, log=''):
         """Update the notice area on the browser and optionally log the message"""
@@ -249,11 +275,10 @@ class Browser:
         self.emergencyOverride = 0
 
     def checkPassword(self, password):
-        logging.info("checkPassword({})".format(password))
-        if (password == "password"):  # TODO: compare to md5 from a file
-            return True
-        else:
+        if self._override_hash is None:
+            logging.warning('Override attempted but override is disabled (no password file)')
             return False
+        return hashlib.sha256(password.encode()).hexdigest() == self._override_hash
 
     def doOverride(self, app):
         """Process override actions (hidden modal from clicking ticker)"""
