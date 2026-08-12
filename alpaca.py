@@ -359,9 +359,9 @@ class Alpaca:
                     continue
                 text = data.decode('utf-8', errors='ignore')
                 # The official Alpaca discovery probe is the ASCII string
-                # "alpacadiscovery1". Also accept the legacy SSDP-style probes.
+                # "alpacadiscovery1".
                 upper = text.upper()
-                if 'ALPACADISCOVERY' in upper or 'M-SEARCH' in upper or 'DISCOVERY' in upper:
+                if 'ALPACADISCOVERY' in upper:
                     logging.info('Received discovery request from %s', addr)
                     response = self._format_discovery_response(addr)
                     sock.sendto(response, addr)
