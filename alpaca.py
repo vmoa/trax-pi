@@ -531,8 +531,9 @@ class Alpaca:
                 time.sleep(ROOF_POWER_SETTLE_DELAY)
 
             # Delegate to the same safety-checked toggle path used by the browser.
-            if browser.browser.startStop(self.app) != 'OK':
-                return self._abort_move(gen, err_no, 'Failed to {} shutter'.format(action))
+            result = browser.browser.startStop(self.app)
+            if result != 'OK':
+                return self._abort_move(gen, err_no, result)
         except Exception as e:
             logging.error('Alpaca: %s shutter failed before actuation: %s', action, e)
             return self._abort_move(gen, err_no, 'Failed to {} shutter: {}'.format(action, e))
