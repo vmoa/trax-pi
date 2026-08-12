@@ -37,6 +37,7 @@ non-blocking design: the command starts the roof and a background watcher
 thread updates the tracked status when the roof reaches its end stop.
 """
 
+import itertools
 import json
 import logging
 import socket
@@ -84,7 +85,7 @@ class Alpaca:
         Alpaca(app, device_number=0)
     """
 
-    server_txid = 0
+    _txid_counter = itertools.count(1)
 
     def __init__(self, app, device_number=0, base_path='/api/v1'):
         self.app = app
@@ -170,8 +171,7 @@ class Alpaca:
         return '{}/dome/{}'.format(self.base, self.device_number)
 
     def _next_txid(self):
-        Alpaca.server_txid += 1
-        return Alpaca.server_txid
+        return next(Alpaca._txid_counter)
 
     def _client_txid(self):
         """Read ClientTransactionID from the query string (GET) or form (PUT)."""
