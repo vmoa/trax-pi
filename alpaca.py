@@ -321,7 +321,7 @@ class Alpaca:
         ]
         return self._resp(devices)
 
-    def _format_discovery_response(self, client_addr):
+    def _format_discovery_response(self):
         # Per the Alpaca discovery specification the UDP reply is a small JSON
         # document naming the HTTP port the Alpaca API is served on.
         try:
@@ -363,7 +363,7 @@ class Alpaca:
                 upper = text.upper()
                 if 'ALPACADISCOVERY' in upper:
                     logging.info('Received discovery request from %s', addr)
-                    response = self._format_discovery_response(addr)
+                    response = self._format_discovery_response()
                     sock.sendto(response, addr)
             except Exception as e:
                 logging.error('Alpaca multicast responder error: %s', e)
