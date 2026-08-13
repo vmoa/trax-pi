@@ -530,7 +530,7 @@ class Alpaca:
                 time.sleep(ROOF_POWER_SETTLE_DELAY)
 
             # Delegate to the same safety-checked toggle path used by the browser.
-            result = browser.browser.startStop(self.app)
+            result = browser.browser.startStop(self.app, skip_park_check=True)
             if result != 'OK':
                 return self._abort_move(gen, err_no, result)
         except Exception as e:

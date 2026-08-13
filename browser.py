@@ -113,7 +113,7 @@ class Browser:
         if (self.emergencyOverride):
             self.enterOverrideMode()
 
-    def startStop(self, app):
+    def startStop(self, app, skip_park_check=False):
         """Process START/STOP button"""
         logging.info("Click: START/STOP from {}".format(flask.request.remote_addr))
 
@@ -126,7 +126,7 @@ class Browser:
         if (device.Gpio.close.isOn()):
             if (device.Gpio.bldg.isOn()):
                 if (device.Gpio.roofin.isOn()):
-                    if (device.Gpio.park.checkParked() == device.park.PARKED):
+                    if (skip_park_check or device.Gpio.park.checkParked() == device.park.PARKED):
                         if (device.Gpio.mntin.isOff()):
                             if (device.Gpio.wx.isOn()):
                                 self.sendNotice("Toggling fob (opening roof)", log='INFO')
@@ -156,7 +156,7 @@ class Browser:
         # Close logic -- roof is open
         elif (device.Gpio.open.isOn()):
             if (device.Gpio.roofin.isOn()):
-                if (device.Gpio.park.checkParked() == device.park.PARKED):
+                if (skip_park_check or device.Gpio.park.checkParked() == device.park.PARKED):
                     if (device.Gpio.mntin.isOff()):
                         self.sendNotice("Toggling fob (closing roof)", log='INFO')
                         device.Gpio.fob.toggleFob()

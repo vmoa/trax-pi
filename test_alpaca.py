@@ -59,7 +59,7 @@ def _make_app():
     device.Gpio = dummyGpio
 
     # Monkeypatch browser startStop to simulate successful toggles
-    browser.browser.startStop = lambda app: 'OK'
+    browser.browser.startStop = lambda app, skip_park_check=False: 'OK'
 
     # Do not bind a real UDP socket during tests
     alpaca.Alpaca._start_multicast_responder = lambda self: None
@@ -187,7 +187,7 @@ def test_shutter_command_guards():
         roofout=SimpleNamespace(turnOn=(lambda: None), turnOff=(lambda: None)),
     )
     calls = {'n': 0}
-    browser.browser.startStop = lambda app: calls.__setitem__('n', calls['n'] + 1) or 'OK'
+    browser.browser.startStop = lambda app, skip_park_check=False: calls.__setitem__('n', calls['n'] + 1) or 'OK'
     alpaca.Alpaca._start_multicast_responder = lambda self: None
 
     app = Flask(__name__)
@@ -222,7 +222,7 @@ def test_motion_generation():
         mntout=SimpleNamespace(turnOff=(lambda: None), turnOn=(lambda: None)),
         roofout=SimpleNamespace(turnOn=(lambda: None), turnOff=(lambda: None)),
     )
-    browser.browser.startStop = lambda app: 'OK'
+    browser.browser.startStop = lambda app, skip_park_check=False: 'OK'
     alpaca.Alpaca._start_multicast_responder = lambda self: None
     # Capture the generation each watcher would be tagged with (no threads).
     started = []
@@ -262,7 +262,7 @@ def test_reservation_rollback_and_pending():
     )
     alpaca.Alpaca._start_multicast_responder = lambda self: None
     alpaca.Alpaca._start_roof_state_watcher = lambda self, gen, *a: None
-    browser.browser.startStop = lambda app: 'OK'
+    browser.browser.startStop = lambda app, skip_park_check=False: 'OK'
 
     app = Flask(__name__)
     inst = alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
@@ -277,7 +277,7 @@ def test_reservation_rollback_and_pending():
     inst._move_pending = False
 
     # A failed startStop rolls the reservation back so status is not stuck Opening.
-    browser.browser.startStop = lambda app: 'ERROR'
+    browser.browser.startStop = lambda app, skip_park_check=False: 'ERROR'
     body = client.put('/api/v1/dome/0/openshutter').get_json()
     assert body['ErrorNumber'] == 1, body
     assert inst._shutter_status is None and inst._move_pending is False
@@ -302,7 +302,7 @@ def test_watcher_failure_modes():
         mntout=SimpleNamespace(turnOff=(lambda: None), turnOn=(lambda: None)),
         roofout=SimpleNamespace(turnOn=(lambda: None), turnOff=(lambda: None)),
     )
-    browser.browser.startStop = lambda app: 'OK'
+    browser.browser.startStop = lambda app, skip_park_check=False: 'OK'
     alpaca.Alpaca._start_multicast_responder = lambda self: None
     # Restore the genuine watcher (earlier tests stub it on the class).
     alpaca.Alpaca._start_roof_state_watcher = _REAL_START_WATCHER
@@ -350,7 +350,7 @@ def test_open_shutter_waits_after_roof_power_on():
         events.append('roofout_on')
     device.Gpio.roofout.turnOn = fake_turn_on
 
-    def fake_start_stop(app):
+    def fake_start_stop(app, skip_park_check=False):
         events.append('startStop')
         return 'OK'
     browser.browser.startStop = fake_start_stop
