@@ -405,35 +405,38 @@ class Alpaca:
         # opening watcher could fire _on_open_complete during a later close,
         # cutting roof power and enabling mount power mid-close.
         def watcher():
-            deadline = time.time() + ROOF_STATE_TIMEOUT
             try:
-                while time.time() < deadline:
-                    if self._motion_gen != gen:
-                        return  # superseded by a newer move
-                    if target_sensor.isOn():
-                        with self._lock:
-                            if self._motion_gen != gen:
-                                return
-                            success_fn()
-                        return
-                    time.sleep(ROOF_STATE_POLL_INTERVAL)
-            except Exception as e:
-                # A transient sensor/GPIO read (or completion callback) failure
-                # must not leave the daemon thread dead with the status stuck
-                # Opening/Closing forever. Fall through to the error transition.
-                logging.error('Alpaca: roof %s watcher error: %s', action_name, e)
-                with self._lock:
-                    if self._motion_gen == gen:
-                        self._shutter_status = SHUTTER_ERROR
-                return
-            with self._lock:
-                if self._motion_gen != gen:
+                deadline = time.time() + ROOF_STATE_TIMEOUT
+                try:
+                    while time.time() < deadline:
+                        if self._motion_gen != gen:
+                            return  # superseded by a newer move
+                        if target_sensor.isOn():
+                            with self._lock:
+                                if self._motion_gen != gen:
+                                    return
+                                success_fn()
+                            return
+                        time.sleep(ROOF_STATE_POLL_INTERVAL)
+                except Exception as e:
+                    # A transient sensor/GPIO read (or completion callback) failure
+                    # must not leave the daemon thread dead with the status stuck
+                    # Opening/Closing forever. Fall through to the error transition.
+                    logging.error('Alpaca: roof %s watcher error: %s', action_name, e)
+                    with self._lock:
+                        if self._motion_gen == gen:
+                            self._shutter_status = SHUTTER_ERROR
                     return
-                self._shutter_status = SHUTTER_ERROR
-            browser.browser.sendNotice(
-                "Timeout waiting for roof {} after {} seconds".format(action_name, ROOF_STATE_TIMEOUT),
-                log='ERROR'
-            )
+                with self._lock:
+                    if self._motion_gen != gen:
+                        return
+                    self._shutter_status = SHUTTER_ERROR
+                browser.browser.sendNotice(
+                    "Timeout waiting for roof {} after {} seconds".format(action_name, ROOF_STATE_TIMEOUT),
+                    log='ERROR'
+                )
+            finally:
+                browser.alpaca_move_active = False
 
         thread = threading.Thread(target=watcher, daemon=True)
         thread.start()
@@ -546,9 +549,13 @@ class Alpaca:
             if self._motion_gen != gen:
                 return self._resp()  # superseded during preflight
             self._move_pending = False
+        # Claim exclusive roof control so a browser /startstop cannot interfere
+        # while the watcher is watching for completion.
+        browser.alpaca_move_active = True
         try:
             self._start_roof_state_watcher(gen, target_sensor, success_fn, action)
         except Exception as e:
+            browser.alpaca_move_active = False
             logging.error('Alpaca: %s watcher failed to start; move left tracked: %s', action, e)
         return self._resp()
 

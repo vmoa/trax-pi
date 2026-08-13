@@ -14,6 +14,11 @@ import sse
 
 OVERRIDE_PASSWD_FILE = '/etc/trax/override.passwd'
 
+# Set to True by alpaca.py while an Alpaca-initiated roof move is in progress.
+# Prevents a concurrent browser /startstop from interfering with the move.
+# Emergency override mode bypasses this gate (as it bypasses all interlocks).
+alpaca_move_active = False
+
 
 class Browser:
 
@@ -121,6 +126,11 @@ class Browser:
             self.sendNotice("EMERGENCY OVERRIDE: Toggling fob", log='INFO')
             device.Gpio.fob.toggle()
             return "OK"
+
+        if alpaca_move_active:
+            msg = "Cannot control roof: automated roof move in progress"
+            self.sendNotice(msg, log='ERROR')
+            return msg
 
         # Open logic -- roof is closed
         if (device.Gpio.close.isOn()):
