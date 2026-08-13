@@ -23,10 +23,10 @@
             <div class="indicator_narrow" id="building_pwr" style="top:190px; left:125px">UNK</div>
 
             <div class="tag_right" style="top:248px; left:0px">ROOF PWR</div>
-            <div class="indicator_narrow" id="roof_pwr" style="top:240px; left:125px">UNK</div>
+            <div class="indicator_button_narrow" id="roof_pwr" style="top:240px; left:125px" onClick="toggleRoofPwr()">UNK</div>
 
             <div class="tag_right" style="top:298px; left:0px">MOUNT PWR</div>
-            <div class="indicator_narrow" id="mount_pwr" style="top:290px; left:125px">UNK</div>
+            <div class="indicator_button_narrow" id="mount_pwr" style="top:290px; left:125px" onClick="toggleMountPwr()">UNK</div>
 
             <div class="notice_box" id="notice" style="top:28px; left:220px">
                 ======================<br/>
@@ -40,9 +40,9 @@
 
             <div class="tag_right" style="top:146px; left:175px; font-size:17px">Mount Power</div>
             <div class="button_normal" id="mount_pwr_on" style="top:136px; left:300px" onClick="doSend('/mountpwr?on')"><div class="green">ON</div></div>
-            <div class="button_normal" id="roof_pwr_off" style="top:136px; left:365px" onClick="doSend('/mountpwr?off')"><div class="red">OFF</div></div>
+            <div class="button_normal" id="mount_pwr_off" style="top:136px; left:365px" onClick="doSend('/mountpwr?off')"><div class="red">OFF</div></div>
 
-            <div class="button_start_stop" id="start_stop" style="top:195px; left:265px" onClick="doSend('/startstop')">START STOP</div>
+            <div class="button_phd" id="phd_button" style="top:195px; left:265px" onClick="doPHD()">ROOF?</div>
             <div class="button_emergency_stop" id="emergency_stop" style="top:280px; left:260px" onClick="doSend('/STOP')">EMERGENCY STOP</div>
 
             <div class="ticker_box" id="ticker" style="top:345px; left:4px" onClick="doOverride()">Tick Tock</div>

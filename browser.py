@@ -14,6 +14,15 @@ import sse
 
 OVERRIDE_PASSWD_FILE = '/etc/trax/override.passwd'
 
+ROOF_POWER_SETTLE_DELAY = 1.0   # seconds to wait after turning on roof power relays
+ROOF_MOVE_TIMEOUT = 60          # seconds before giving up on a roof move
+ROOF_MOVE_POLL = 0.5            # seconds between sensor polls during a move
+
+# True while any roof move (browser-initiated or Alpaca-initiated) is in progress.
+# Prevents concurrent /startstop, /open, /close from interfering.
+# Emergency override mode bypasses this gate, as it bypasses all interlocks.
+roof_move_active = False
+
 
 class Browser:
 
@@ -113,8 +122,118 @@ class Browser:
         if (self.emergencyOverride):
             self.enterOverrideMode()
 
+    def doOpen(self, skip_park_check=False):
+        """Execute the full roof-open sequence: safety checks, power management, fob toggle, watcher.
+
+        Manages power automatically: turns mount power off and roof power on as needed.
+        Returns 'OK' on success or an error message string on failure.
+        """
+        global roof_move_active
+        if roof_move_active:
+            msg = "Cannot open roof: a roof move is already in progress"
+            self.sendNotice(msg, log='ERROR')
+            return msg
+        if not device.Gpio.close.isOn():
+            msg = "Cannot open roof: roof is not closed"
+            self.sendNotice(msg, log='ERROR')
+            return msg
+        if not device.Gpio.bldg.isOn():
+            msg = "Cannot open roof: building power has failed"
+            self.sendNotice(msg, log='ERROR')
+            return msg
+        if not skip_park_check and device.Gpio.park.checkParked() != device.park.PARKED:
+            msg = "Cannot open roof: Mount must be parked first"
+            self.sendNotice(msg, log='ERROR')
+            return msg
+        if not device.Gpio.wx.isOn():
+            msg = "Cannot open roof: Weather not OK"
+            self.sendNotice(msg, log='ERROR')
+            return msg
+
+        # Power management: ensure mount off and roof on before moving.
+        device.Gpio.mntout.turnOff()
+        if not device.Gpio.roofout.isOn():
+            device.Gpio.roofout.turnOn()
+            time.sleep(ROOF_POWER_SETTLE_DELAY)
+
+        self.sendNotice("Toggling fob (opening roof)", log='INFO')
+        device.Gpio.fob.toggleFob()
+        self._start_move_watcher(device.Gpio.open, self._on_open_complete, 'open')
+        return "OK"
+
+    def doClose(self, skip_park_check=False):
+        """Execute the full roof-close sequence: safety checks, fob toggle, watcher.
+
+        Does NOT auto-manage mount power — mount must be off before calling.
+        Returns 'OK' on success or an error message string on failure.
+        """
+        global roof_move_active
+        if roof_move_active:
+            msg = "Cannot close roof: a roof move is already in progress"
+            self.sendNotice(msg, log='ERROR')
+            return msg
+        if not device.Gpio.open.isOn():
+            msg = "Cannot close roof: roof is not open"
+            self.sendNotice(msg, log='ERROR')
+            return msg
+        if not skip_park_check and device.Gpio.park.checkParked() != device.park.PARKED:
+            msg = "Cannot close roof: mount must be parked first"
+            self.sendNotice(msg, log='ERROR')
+            return msg
+        if not device.Gpio.mntin.isOff():
+            msg = "Cannot close roof: mount power is on"
+            self.sendNotice(msg, log='ERROR')
+            return msg
+        if not device.Gpio.roofout.isOn():
+            device.Gpio.roofout.turnOn()
+            time.sleep(ROOF_POWER_SETTLE_DELAY)
+
+        self.sendNotice("Toggling fob (closing roof)", log='INFO')
+        device.Gpio.fob.toggleFob()
+        self._start_move_watcher(device.Gpio.close, self._on_close_complete, 'close')
+        return "OK"
+
+    def _on_open_complete(self):
+        """Called by the move watcher when the roof finishes opening."""
+        self.sendNotice("Roof open; turning off roof power and enabling mount power", log='INFO')
+        device.Gpio.roofout.turnOff()
+        device.Gpio.mntout.turnOn()
+
+    def _on_close_complete(self):
+        """Called by the move watcher when the roof finishes closing."""
+        self.sendNotice("Roof closed; turning off roof power", log='INFO')
+        device.Gpio.roofout.turnOff()
+
+    def _start_move_watcher(self, target_sensor, complete_fn, action_name):
+        """Start a daemon thread that waits for target_sensor then calls complete_fn.
+
+        Sets roof_move_active=True immediately and clears it via finally when done.
+        """
+        global roof_move_active
+
+        def watcher():
+            global roof_move_active
+            try:
+                deadline = time.time() + ROOF_MOVE_TIMEOUT
+                while time.time() < deadline:
+                    if target_sensor.isOn():
+                        complete_fn()
+                        return
+                    time.sleep(ROOF_MOVE_POLL)
+                self.sendNotice(
+                    "Timeout waiting for roof {} after {} seconds".format(action_name, ROOF_MOVE_TIMEOUT),
+                    log='ERROR'
+                )
+            except Exception as e:
+                logging.error('Browser: roof %s watcher error: %s', action_name, e)
+            finally:
+                roof_move_active = False
+
+        roof_move_active = True
+        threading.Thread(target=watcher, daemon=True).start()
+
     def startStop(self, app):
-        """Process START/STOP button"""
+        """Process START/STOP button — delegates to doOpen/doClose for terminal positions."""
         logging.info("Click: START/STOP from {}".format(flask.request.remote_addr))
 
         if (self.emergencyOverride):
@@ -122,60 +241,12 @@ class Browser:
             device.Gpio.fob.toggle()
             return "OK"
 
-        # Open logic -- roof is closed
         if (device.Gpio.close.isOn()):
-            if (device.Gpio.bldg.isOn()):
-                if (device.Gpio.roofin.isOn()):
-                    if (device.Gpio.park.checkParked() == device.park.PARKED):
-                        if (device.Gpio.mntin.isOff()):
-                            if (device.Gpio.wx.isOn()):
-                                self.sendNotice("Toggling fob (opening roof)", log='INFO')
-                                device.Gpio.fob.toggleFob()
-                                return "OK"
-                            else:
-                                msg = "Cannot open roof: Weather not OK"
-                                self.sendNotice(msg, log='ERROR')
-                                return msg
-                        else:
-                            msg = "Cannot open roof: Mount power is on"
-                            self.sendNotice(msg, log='ERROR')
-                            return msg
-                    else:
-                        msg = "Cannot open roof: Mount must be parked first"
-                        self.sendNotice(msg, log='ERROR')
-                        return msg
-                else:
-                    msg = "Cannot open roof: roof power is not on"
-                    self.sendNotice(msg, log='ERROR')
-                    return msg
-            else:
-                msg = "Cannot open roof: building power has failed"
-                self.sendNotice(msg, log='ERROR')
-                return msg
-
-        # Close logic -- roof is open
+            return self.doOpen()
         elif (device.Gpio.open.isOn()):
-            if (device.Gpio.roofin.isOn()):
-                if (device.Gpio.park.checkParked() == device.park.PARKED):
-                    if (device.Gpio.mntin.isOff()):
-                        self.sendNotice("Toggling fob (closing roof)", log='INFO')
-                        device.Gpio.fob.toggleFob()
-                        return "OK"
-                    else:
-                        msg = "Cannot close roof: mount power is on"
-                        self.sendNotice(msg, log='ERROR')
-                        return msg
-                else:
-                    msg = "Cannot close roof: mount must be parked first"
-                    self.sendNotice(msg, log='ERROR')
-                    return msg
-            else:
-                msg = "Cannot close roof: roof power is not on"
-                self.sendNotice(msg, log='ERROR')
-                return msg
-
-        # Midway logic -- neither open nor closed
+            return self.doClose()
         else:
+            # Midway: no directional safety checks; just toggle
             self.sendNotice("Toggling fob (roof midway)", log='INFO')
             device.Gpio.fob.toggle()
             return "OK"
