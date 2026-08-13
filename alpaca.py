@@ -530,6 +530,10 @@ class Alpaca:
                 time.sleep(ROOF_POWER_SETTLE_DELAY)
 
             # Delegate to the same safety-checked toggle path used by the browser.
+            # Note: if emergency override mode is active, startStop() bypasses the
+            # weather check and most safety interlocks by design — override is an
+            # "I know what I'm doing" assertion by a human operator. An Alpaca
+            # client (e.g. NINA) inherits that bypass while override is active.
             result = browser.browser.startStop(self.app)
             if result != 'OK':
                 return self._abort_move(gen, err_no, result)
