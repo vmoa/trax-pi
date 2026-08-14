@@ -266,22 +266,20 @@ class Browser:
         if (action == 'ON'):
             if (self.emergencyOverride):
                 self.sendNotice("EMERGENCY OVERRIDE: Turning on roof power", log='INFO')
-                device.Gpio.roofout.turnOn()
-                return "OK"
             else:
                 self.sendNotice("Turning on roof power", log='INFO')
-                device.Gpio.roofout.turnOn()
-                return 'OK'
+            device.Gpio.roofout.turnOn()
+            sse.sse.send(type='indicator', id='roof_pwr', status='on')
+            return 'OK'
 
         else:    # action == 'OFF'
             if (self.emergencyOverride):
                 self.sendNotice("EMERGENCY OVERRIDE: Turning off roof power", log='INFO')
-                device.Gpio.roofout.turnOff()
-                return "OK"
             else:
                 self.sendNotice("Turning off roof power", log='INFO')
-                device.Gpio.roofout.turnOff()
-                return 'OK'
+            device.Gpio.roofout.turnOff()
+            sse.sse.send(type='indicator', id='roof_pwr', status='off')
+            return 'OK'
 
     def mountPower(self, app):
         """Porcess Mount Power ON or OFF button"""
@@ -297,25 +295,23 @@ class Browser:
         if (action == 'ON'):
             if (self.emergencyOverride):
                 self.sendNotice("EMERGENCY OVERRIDE: Turning on mount power", log='INFO')
-                device.Gpio.mntout.turnOn()
-                return "OK"
             elif (device.Gpio.open.isOff()):
                 self.sendNotice("Cannot turn on mount: roof is not open", log='ERROR')
                 return 'ERROR'
             else:
                 self.sendNotice("Turning on mount power", log='INFO')
-                device.Gpio.mntout.turnOn()
-                return 'OK'
+            device.Gpio.mntout.turnOn()
+            sse.sse.send(type='indicator', id='mount_pwr', status='on')
+            return 'OK'
 
         else:    # action == 'OFF'
             if (self.emergencyOverride):
                 self.sendNotice("EMERGENCY OVERRIDE: Turning off mount power", log='INFO')
-                device.Gpio.mntout.turnOff()
-                return "OK"
             else:
                 self.sendNotice("Turning off mount power", log='INFO')
-                device.Gpio.mntout.turnOff()
-                return 'OK'
+            device.Gpio.mntout.turnOff()
+            sse.sse.send(type='indicator', id='mount_pwr', status='off')
+            return 'OK'
 
     def checkPark(self, app):
         """Actively check the mount park status"""
