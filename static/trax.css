@@ -121,6 +121,45 @@ div.indicator_button_narrow:hover {
     padding: 0px;
 }
 
+div.toggle_switch {
+    position: fixed;
+    width: 60px;
+    height: 28px;
+    border-radius: 14px;
+    border: 1px solid #B3DADA;
+    box-sizing: border-box;
+    padding: 3px;
+    background-color: #888888;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+div.toggle_switch[data-state="on"]  { background-color: #00BB00; }
+div.toggle_switch[data-state="off"] { background-color: #CC2200; }
+div.toggle_switch[data-state="unk"] { background-color: #888888; }
+
+div.toggle_switch .toggle_knob {
+    display: block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+div.toggle_switch[data-state="on"] .toggle_knob {
+    transform: translateX(32px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    div.toggle_switch,
+    div.toggle_switch .toggle_knob { transition: none; }
+}
+
 /* Text area: 32 wide x 3 tall */
 div.notice_box {
     position: fixed;

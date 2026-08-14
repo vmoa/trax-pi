@@ -88,13 +88,21 @@ function update_indicator(e) {
         element.innerHTML = 'UNKNOWN';
 
     } else if (o.status == 'on') {
-        element.style.backgroundColor = green;
-        element.style.color = black;
-        element.innerHTML = 'ON';
+        if (element.classList.contains('toggle_switch')) {
+            element.dataset.state = 'on';
+        } else {
+            element.style.backgroundColor = green;
+            element.style.color = black;
+            element.innerHTML = 'ON';
+        }
     } else if (o.status == 'off') {
-        element.style.backgroundColor = red;
-        element.style.color = yellow;
-        element.innerHTML = 'OFF';
+        if (element.classList.contains('toggle_switch')) {
+            element.dataset.state = 'off';
+        } else {
+            element.style.backgroundColor = red;
+            element.style.color = yellow;
+            element.innerHTML = 'OFF';
+        }
     } else {
         console.log("update_indicator(): unknown event id:"+o.id+" status:"+o.status);
     }
@@ -135,24 +143,14 @@ function doPHD() {
     }
 }
 
-// Toggle roof power by reading the indicator's current text
 function toggleRoofPwr() {
     var el = document.getElementById('roof_pwr');
-    if (el.innerHTML === 'ON') {
-        doSend('/roofpwr?off');
-    } else {
-        doSend('/roofpwr?on');
-    }
+    doSend(el.dataset.state === 'on' ? '/roofpwr?off' : '/roofpwr?on');
 }
 
-// Toggle mount power by reading the indicator's current text
 function toggleMountPwr() {
     var el = document.getElementById('mount_pwr');
-    if (el.innerHTML === 'ON') {
-        doSend('/mountpwr?off');
-    } else {
-        doSend('/mountpwr?on');
-    }
+    doSend(el.dataset.state === 'on' ? '/mountpwr?off' : '/mountpwr?on');
 }
 
 //
