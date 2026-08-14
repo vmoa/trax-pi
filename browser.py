@@ -12,7 +12,7 @@ import time
 import device
 import sse
 
-OVERRIDE_PASSWD_FILE = '/etc/trax/override.passwd'
+OVERRIDE_PASSWD_FILE = 'override.passwd'
 
 ROOF_POWER_SETTLE_DELAY = 1.0   # seconds to wait after turning on roof power relays
 ROOF_MOVE_TIMEOUT = 60          # seconds before giving up on a roof move
