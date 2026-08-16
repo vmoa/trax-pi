@@ -30,7 +30,11 @@ app = flask.Flask(__name__)
 # Register minimal Alpaca dome interface (shutter-only)
 alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
 
-version = 'v2.0.0'      # T-Rax version
+try:
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'VERSION')) as _vf:
+        version = _vf.read().strip()
+except OSError:
+    version = 'unknown'
 statusInterval = 60     # Seconds between status updates without input changes
 lockfile = 0            # Global so when we lock we keep it
 lockfilename = '/tmp/trax.lock'

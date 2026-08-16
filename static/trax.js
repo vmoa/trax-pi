@@ -15,6 +15,11 @@ var original_background_color = '';   // Will be set first time we override
 
 var currentRoofStatus = 'unknown';  // Tracks latest roof_position for doPHD()
 
+// True once the user has clicked a power toggle; prevents sensor updates from
+// overwriting the knob position (which gives immediate click feedback).
+var roofPwrUserActed  = false;
+var mountPwrUserActed = false;
+
 // event:innerHTML { id: 'notice', data: 'msg' }
 function set_innerHTML(e) {
     var o = JSON.parse(e.data);
@@ -52,7 +57,7 @@ function update_indicator(e) {
         element.style.color = black;
         element.innerHTML = 'MIDWAY';
         currentRoofStatus = 'midway';
-        document.getElementById('phd_button').innerHTML = 'MOVE ROOF?';
+        document.getElementById('phd_button').innerHTML = 'MOVE ROOF';
     } else if (o.id == "roof_position" && o.status == 'closed') {
         element.style.backgroundColor = red;
         element.style.color = yellow;
@@ -90,6 +95,9 @@ function update_indicator(e) {
     } else if (o.status == 'on') {
         if (element.classList.contains('toggle_switch')) {
             element.dataset.state = 'on';
+            if ((o.id === 'roof_pwr' && !roofPwrUserActed) || (o.id === 'mount_pwr' && !mountPwrUserActed)) {
+                element.dataset.knob = 'right';
+            }
         } else {
             element.style.backgroundColor = green;
             element.style.color = black;
@@ -98,6 +106,9 @@ function update_indicator(e) {
     } else if (o.status == 'off') {
         if (element.classList.contains('toggle_switch')) {
             element.dataset.state = 'off';
+            if ((o.id === 'roof_pwr' && !roofPwrUserActed) || (o.id === 'mount_pwr' && !mountPwrUserActed)) {
+                element.dataset.knob = 'left';
+            }
         } else {
             element.style.backgroundColor = red;
             element.style.color = yellow;
@@ -143,14 +154,33 @@ function doPHD() {
     }
 }
 
+// Power toggle design: knob position and background color are driven independently.
+// data-knob (left/right) is set only by clicks, giving immediate visual feedback.
+// data-state (on/off/unk) is set only by sensor SSE events, reflecting actual hardware.
+// Before the first click, sensor events also sync the knob so the initial position
+// matches reality. After the first click, the knob is fully user-driven.
 function toggleRoofPwr() {
+    roofPwrUserActed = true;
     var el = document.getElementById('roof_pwr');
-    doSend(el.dataset.state === 'on' ? '/roofpwr?off' : '/roofpwr?on');
+    if (el.dataset.knob === 'right') {
+        el.dataset.knob = 'left';
+        doSend('/roofpwr?off');
+    } else {
+        el.dataset.knob = 'right';
+        doSend('/roofpwr?on');
+    }
 }
 
 function toggleMountPwr() {
+    mountPwrUserActed = true;
     var el = document.getElementById('mount_pwr');
-    doSend(el.dataset.state === 'on' ? '/mountpwr?off' : '/mountpwr?on');
+    if (el.dataset.knob === 'right') {
+        el.dataset.knob = 'left';
+        doSend('/mountpwr?off');
+    } else {
+        el.dataset.knob = 'right';
+        doSend('/mountpwr?on');
+    }
 }
 
 //

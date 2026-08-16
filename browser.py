@@ -269,7 +269,6 @@ class Browser:
             else:
                 self.sendNotice("Turning on roof power", log='INFO')
             device.Gpio.roofout.turnOn()
-            sse.sse.send(type='indicator', id='roof_pwr', status='on')
             return 'OK'
 
         else:    # action == 'OFF'
@@ -278,7 +277,6 @@ class Browser:
             else:
                 self.sendNotice("Turning off roof power", log='INFO')
             device.Gpio.roofout.turnOff()
-            sse.sse.send(type='indicator', id='roof_pwr', status='off')
             return 'OK'
 
     def mountPower(self, app):
@@ -301,7 +299,6 @@ class Browser:
             else:
                 self.sendNotice("Turning on mount power", log='INFO')
             device.Gpio.mntout.turnOn()
-            sse.sse.send(type='indicator', id='mount_pwr', status='on')
             return 'OK'
 
         else:    # action == 'OFF'
@@ -310,7 +307,6 @@ class Browser:
             else:
                 self.sendNotice("Turning off mount power", log='INFO')
             device.Gpio.mntout.turnOff()
-            sse.sse.send(type='indicator', id='mount_pwr', status='off')
             return 'OK'
 
     def checkPark(self, app):
