@@ -442,15 +442,14 @@ class Alpaca:
     # (called from the watcher) so the status update and GPIO actuation are
     # atomic with respect to command acceptance.
     def _on_open_complete(self):
+        # GPIO actuation (roof power off, mount power on) is handled by
+        # browser.Browser._on_open_complete via the move watcher started by doOpen().
         self._shutter_status = SHUTTER_OPEN
-        browser.browser.sendNotice("Roof open; turning off roof power and enabling mount power", log='INFO')
-        device.Gpio.roofout.turnOff()
-        device.Gpio.mntout.turnOn()
 
     def _on_close_complete(self):
+        # GPIO actuation (roof power off) is handled by
+        # browser.Browser._on_close_complete via the move watcher started by doClose().
         self._shutter_status = SHUTTER_CLOSED
-        browser.browser.sendNotice("Roof closed; turning off roof power", log='INFO')
-        device.Gpio.roofout.turnOff()
 
     def _shutterstatus(self):
         return self._resp(self._get_shutter_state())
@@ -518,31 +517,26 @@ class Alpaca:
         # the fob is toggled roll the reservation back; once startStop() has
         # actuated the roof we must not roll back (a rollback would let a retry
         # re-toggle and stop the moving roof).
+        # doOpen/doClose handle all preflight checks (park, weather, building power),
+        # power management (mount off, roof on, settle delay), fob toggle, and the
+        # browser-side completion watcher that fires GPIO actions on arrival.
+        # Note: if emergency override is active, doOpen/doClose bypass the weather
+        # check and most safety interlocks — intentional; override is an "I know
+        # what I'm doing" assertion by a human operator, Alpaca inherits that bypass.
         try:
-            if device.Gpio.park.checkParked() != device.park.PARKED:
-                return self._abort_move(gen, err_no, 'Cannot {} shutter: mount must be parked first'.format(action))
-
-            # Ensure mount power is off and roof power is on before moving.
-            device.Gpio.mntout.turnOff()
-            device.Gpio.roofout.turnOn()
-            if ROOF_POWER_SETTLE_DELAY > 0:
-                logging.info('Alpaca: waiting %.1f seconds for roof power relays to settle before toggling roof', ROOF_POWER_SETTLE_DELAY)
-                time.sleep(ROOF_POWER_SETTLE_DELAY)
-
-            # Delegate to the same safety-checked toggle path used by the browser.
-            # Note: if emergency override mode is active, startStop() bypasses the
-            # weather check and most safety interlocks by design — override is an
-            # "I know what I'm doing" assertion by a human operator. An Alpaca
-            # client (e.g. NINA) inherits that bypass while override is active.
-            result = browser.browser.startStop(self.app)
+            if action == 'open':
+                result = browser.browser.doOpen()
+            else:
+                # Turn off mount power before doClose so its gate passes.
+                device.Gpio.mntout.turnOff()
+                result = browser.browser.doClose()
             if result != 'OK':
                 return self._abort_move(gen, err_no, result)
         except Exception as e:
             logging.error('Alpaca: %s shutter failed before actuation: %s', action, e)
             return self._abort_move(gen, err_no, 'Failed to {} shutter: {}'.format(action, e))
 
-        # startStop() has actuated the fob; browser.toggleFob() moves the roof
-        # asynchronously, so from here the roof is committed to moving. Promote
+        # doOpen/doClose has actuated the fob; the roof is committed to moving. Promote
         # the reservation to a confirmed move; any failure starting the watcher
         # leaves the move conservatively tracked (Opening/Closing) rather than
         # rolled back, so a retry cannot trigger a second, roof-stopping toggle.

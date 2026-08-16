@@ -61,3 +61,7 @@ Session.vim
 ###########################
 RCS
 *,v
+
+# Override Password file
+########################
+override.passwd

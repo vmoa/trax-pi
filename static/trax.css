@@ -100,11 +100,71 @@ div.indicator_narrow {
     font-size: 16px;
 }
 
-/* Text area: 32 wide x 3 tall */
+div.indicator_button_narrow {
+    position: fixed;
+    width: 40px;
+    height: 28px;
+    line-height: 28px;
+    border: 1px solid white;
+    border-radius: 5px;
+    padding: 1px;
+    border-color: #B3DADA;
+    background-color: yellow;
+    text-align: center;
+    color: red;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+div.indicator_button_narrow:hover {
+    border: 2px solid #888888;
+    padding: 0px;
+}
+
+div.toggle_switch {
+    position: fixed;
+    width: 60px;
+    height: 28px;
+    border-radius: 14px;
+    border: 1px solid #B3DADA;
+    box-sizing: border-box;
+    padding: 3px;
+    background-color: #888888;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+div.toggle_switch[data-state="on"]  { background-color: #00BB00; }
+div.toggle_switch[data-state="off"] { background-color: #CC2200; }
+div.toggle_switch[data-state="unk"] { background-color: #888888; }
+
+div.toggle_switch .toggle_knob {
+    display: block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+div.toggle_switch[data-knob="right"] .toggle_knob {
+    transform: translateX(32px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    div.toggle_switch,
+    div.toggle_switch .toggle_knob { transition: none; }
+}
+
+/* Text area: 32 wide x 4 tall */
 div.notice_box {
     position: fixed;
     width: 188px;
-    height: 40px;
+    height: 54px;
     line-height: 14px;
     border: 1px solid white;
     padding: 3px;
@@ -180,10 +240,31 @@ div.button_start_stop:hover {
     padding: 9px;
 }
 
+div.button_phd {
+    position: fixed;
+    width: 90px;
+    height: 45px;
+    line-height: 45px;
+    border: 1px solid #B3DADA;
+    border-radius: 12px;
+    padding: 2px;
+    background-color: #00FF00;
+    text-align: center;
+    color: #0B00FF;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+div.button_phd:hover {
+    border: 2px solid #888888;
+    padding: 1px;
+}
+
 div.button_emergency_stop {
     position: fixed;
     width: 100px;
-    height: 38px;
+    height: 82px;
     line-height: 18px;
     border: 1px solid #B3DADA;
     border-radius: 12px;
@@ -194,6 +275,9 @@ div.button_emergency_stop {
     font-family: sans-serif;
     font-size: 15px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 div.button_emergency_stop:hover {

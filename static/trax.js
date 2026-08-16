@@ -13,6 +13,13 @@ var override_mode = 0;  // Used to determine which modal to display
 var override_background_color = 'orange';
 var original_background_color = '';   // Will be set first time we override
 
+var currentRoofStatus = 'unknown';  // Tracks latest roof_position for doPHD()
+
+// True once the user has clicked a power toggle; prevents sensor updates from
+// overwriting the knob position (which gives immediate click feedback).
+var roofPwrUserActed  = false;
+var mountPwrUserActed = false;
+
 // event:innerHTML { id: 'notice', data: 'msg' }
 function set_innerHTML(e) {
     var o = JSON.parse(e.data);
@@ -43,18 +50,26 @@ function update_indicator(e) {
         element.style.backgroundColor = green;
         element.style.color = black;
         element.innerHTML = 'OPEN';
+        currentRoofStatus = 'open';
+        document.getElementById('phd_button').innerHTML = 'CLOSE ROOF';
     } else if (o.id == "roof_position" && o.status == 'midway') {
         element.style.backgroundColor = yellow;
         element.style.color = black;
         element.innerHTML = 'MIDWAY';
+        currentRoofStatus = 'midway';
+        document.getElementById('phd_button').innerHTML = 'MOVE ROOF';
     } else if (o.id == "roof_position" && o.status == 'closed') {
         element.style.backgroundColor = red;
         element.style.color = yellow;
         element.innerHTML = 'CLOSED';
+        currentRoofStatus = 'closed';
+        document.getElementById('phd_button').innerHTML = 'OPEN ROOF';
     } else if (o.id == "roof_position" && o.status == 'confused') {
         element.style.backgroundColor = light_red;
         element.style.color = yellow;
         element.innerHTML = 'CONFUSED';
+        currentRoofStatus = 'confused';
+        document.getElementById('phd_button').innerHTML = 'STOP!';
 
     } else if (o.id == "mount_position" && o.status == 'parked') {
         element.style.backgroundColor = green;
@@ -78,13 +93,27 @@ function update_indicator(e) {
         element.innerHTML = 'UNKNOWN';
 
     } else if (o.status == 'on') {
-        element.style.backgroundColor = green;
-        element.style.color = black;
-        element.innerHTML = 'ON';
+        if (element.classList.contains('toggle_switch')) {
+            element.dataset.state = 'on';
+            if ((o.id === 'roof_pwr' && !roofPwrUserActed) || (o.id === 'mount_pwr' && !mountPwrUserActed)) {
+                element.dataset.knob = 'right';
+            }
+        } else {
+            element.style.backgroundColor = green;
+            element.style.color = black;
+            element.innerHTML = 'ON';
+        }
     } else if (o.status == 'off') {
-        element.style.backgroundColor = red;
-        element.style.color = yellow;
-        element.innerHTML = 'OFF';
+        if (element.classList.contains('toggle_switch')) {
+            element.dataset.state = 'off';
+            if ((o.id === 'roof_pwr' && !roofPwrUserActed) || (o.id === 'mount_pwr' && !mountPwrUserActed)) {
+                element.dataset.knob = 'left';
+            }
+        } else {
+            element.style.backgroundColor = red;
+            element.style.color = yellow;
+            element.innerHTML = 'OFF';
+        }
     } else {
         console.log("update_indicator(): unknown event id:"+o.id+" status:"+o.status);
     }
@@ -114,6 +143,46 @@ function doSend(url) {
     xhr.send(null);
 }
 
+// PHD ("Push Here Dummy") button: send the right command based on roof state
+function doPHD() {
+    if (currentRoofStatus === 'closed') {
+        doSend('/open');
+    } else if (currentRoofStatus === 'open') {
+        doSend('/close');
+    } else {
+        doSend('/startstop');  // midway, confused, or unknown: fall back to raw toggle
+    }
+}
+
+// Power toggle design: knob position and background color are driven independently.
+// data-knob (left/right) is set only by clicks, giving immediate visual feedback.
+// data-state (on/off/unk) is set only by sensor SSE events, reflecting actual hardware.
+// Before the first click, sensor events also sync the knob so the initial position
+// matches reality. After the first click, the knob is fully user-driven.
+function toggleRoofPwr() {
+    roofPwrUserActed = true;
+    var el = document.getElementById('roof_pwr');
+    if (el.dataset.knob === 'right') {
+        el.dataset.knob = 'left';
+        doSend('/roofpwr?off');
+    } else {
+        el.dataset.knob = 'right';
+        doSend('/roofpwr?on');
+    }
+}
+
+function toggleMountPwr() {
+    mountPwrUserActed = true;
+    var el = document.getElementById('mount_pwr');
+    if (el.dataset.knob === 'right') {
+        el.dataset.knob = 'left';
+        doSend('/mountpwr?off');
+    } else {
+        el.dataset.knob = 'right';
+        doSend('/mountpwr?on');
+    }
+}
+
 //
 // Handle our emergency override modal
 //
@@ -138,7 +207,7 @@ function doOverride() {
         });
 
         // Register the numerous modal close actions
-        Array.from(document.getElementsByClassName("close")).forEach(closer => 
+        Array.from(document.getElementsByClassName("close")).forEach(closer =>
             closer.onclick = function() {  // each of the close "X"s
                 passwordModal.style.display = "none";
                 exitModal.style.display = "none";

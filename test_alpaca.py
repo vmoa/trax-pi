@@ -58,8 +58,10 @@ def _make_app():
     )
     device.Gpio = dummyGpio
 
-    # Monkeypatch browser startStop to simulate successful toggles
-    browser.browser.startStop = lambda app: 'OK'
+    # Monkeypatch doOpen/doClose so tests don't touch GPIO or start watcher threads.
+    browser.browser.doOpen = lambda **kw: 'OK'
+    browser.browser.doClose = lambda **kw: 'OK'
+    browser.roof_move_active = False
 
     # Do not bind a real UDP socket during tests
     alpaca.Alpaca._start_multicast_responder = lambda self: None
@@ -187,7 +189,9 @@ def test_shutter_command_guards():
         roofout=SimpleNamespace(turnOn=(lambda: None), turnOff=(lambda: None)),
     )
     calls = {'n': 0}
-    browser.browser.startStop = lambda app: calls.__setitem__('n', calls['n'] + 1) or 'OK'
+    browser.browser.doOpen = lambda **kw: calls.__setitem__('n', calls['n'] + 1) or 'OK'
+    browser.browser.doClose = lambda **kw: calls.__setitem__('n', calls['n'] + 1) or 'OK'
+    browser.roof_move_active = False
     alpaca.Alpaca._start_multicast_responder = lambda self: None
 
     app = Flask(__name__)
@@ -209,7 +213,7 @@ def test_shutter_command_guards():
         assert client.put('/api/v1/dome/0/openshutter').get_json()['ErrorNumber'] == 1, state
         assert client.put('/api/v1/dome/0/closeshutter').get_json()['ErrorNumber'] == 2, state
 
-    assert calls['n'] == 0, 'startStop must not be invoked from a non-terminal roof position'
+    assert calls['n'] == 0, 'doOpen/doClose must not be invoked from a non-terminal roof position'
 
     print('Shutter command guard test passed')
 
@@ -222,7 +226,9 @@ def test_motion_generation():
         mntout=SimpleNamespace(turnOff=(lambda: None), turnOn=(lambda: None)),
         roofout=SimpleNamespace(turnOn=(lambda: None), turnOff=(lambda: None)),
     )
-    browser.browser.startStop = lambda app: 'OK'
+    browser.browser.doOpen = lambda **kw: 'OK'
+    browser.browser.doClose = lambda **kw: 'OK'
+    browser.roof_move_active = False
     alpaca.Alpaca._start_multicast_responder = lambda self: None
     # Capture the generation each watcher would be tagged with (no threads).
     started = []
@@ -262,7 +268,9 @@ def test_reservation_rollback_and_pending():
     )
     alpaca.Alpaca._start_multicast_responder = lambda self: None
     alpaca.Alpaca._start_roof_state_watcher = lambda self, gen, *a: None
-    browser.browser.startStop = lambda app: 'OK'
+    browser.browser.doOpen = lambda **kw: 'OK'
+    browser.browser.doClose = lambda **kw: 'OK'
+    browser.roof_move_active = False
 
     app = Flask(__name__)
     inst = alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
@@ -276,16 +284,16 @@ def test_reservation_rollback_and_pending():
     inst._shutter_status = None
     inst._move_pending = False
 
-    # A failed startStop rolls the reservation back so status is not stuck Opening.
-    browser.browser.startStop = lambda app: 'ERROR'
+    # A failed doOpen rolls the reservation back so status is not stuck Opening.
+    browser.browser.doOpen = lambda **kw: 'Cannot open: test-induced failure'
     body = client.put('/api/v1/dome/0/openshutter').get_json()
     assert body['ErrorNumber'] == 1, body
     assert inst._shutter_status is None and inst._move_pending is False
 
-    # An exception during preflight also rolls back rather than leaking state.
-    def boom():
+    # An exception from doOpen also rolls back rather than leaking state.
+    def boom_open(**kw):
         raise RuntimeError('gpio fault')
-    device.Gpio.park = SimpleNamespace(checkParked=boom)
+    browser.browser.doOpen = boom_open
     body = client.put('/api/v1/dome/0/openshutter').get_json()
     assert body['ErrorNumber'] == 1, body
     assert inst._shutter_status is None and inst._move_pending is False
@@ -302,14 +310,16 @@ def test_watcher_failure_modes():
         mntout=SimpleNamespace(turnOff=(lambda: None), turnOn=(lambda: None)),
         roofout=SimpleNamespace(turnOn=(lambda: None), turnOff=(lambda: None)),
     )
-    browser.browser.startStop = lambda app: 'OK'
+    browser.browser.doOpen = lambda **kw: 'OK'
+    browser.browser.doClose = lambda **kw: 'OK'
+    browser.roof_move_active = False
     alpaca.Alpaca._start_multicast_responder = lambda self: None
     # Restore the genuine watcher (earlier tests stub it on the class).
     alpaca.Alpaca._start_roof_state_watcher = _REAL_START_WATCHER
 
-    # (1) The fob has already actuated (startStop OK) but the watcher fails to
-    # start: the move must stay tracked as Opening -- NOT rolled back -- so a
-    # retry cannot fire a second, roof-stopping toggle.
+    # (1) The fob has already actuated (doOpen OK) but the Alpaca status watcher
+    # fails to start: the move must stay tracked as Opening -- NOT rolled back --
+    # so a retry cannot fire a second, roof-stopping toggle.
     def raise_watcher(self, gen, *a):
         raise RuntimeError('cannot start thread')
     alpaca.Alpaca._start_roof_state_watcher = raise_watcher
@@ -337,42 +347,52 @@ def test_watcher_failure_modes():
     print('Watcher failure-mode test passed')
 
 
-def test_open_shutter_waits_after_roof_power_on():
-    """A roof-power enable should settle before the fob toggle is issued."""
+def test_alpaca_begin_move_delegates_to_browser():
+    """OpenShutter calls doOpen(); CloseShutter turns off mount then calls doClose()."""
     device.Gpio = SimpleNamespace(
-        open=DummySensor(False), close=DummySensor(True),
+        open=DummySensor(True),   # roof is OPEN for close test
+        close=DummySensor(False),
         park=SimpleNamespace(checkParked=(lambda: device.park.PARKED)),
         mntout=SimpleNamespace(turnOff=(lambda: None), turnOn=(lambda: None)),
         roofout=SimpleNamespace(turnOn=(lambda: None), turnOff=(lambda: None)),
     )
     events = []
-    def fake_turn_on():
-        events.append('roofout_on')
-    device.Gpio.roofout.turnOn = fake_turn_on
+    def fake_mntout_off():
+        events.append('mntout_off')
+    device.Gpio.mntout.turnOff = fake_mntout_off
 
-    def fake_start_stop(app):
-        events.append('startStop')
+    def fake_doOpen(**kw):
+        events.append('doOpen')
         return 'OK'
-    browser.browser.startStop = fake_start_stop
+    def fake_doClose(**kw):
+        events.append('doClose')
+        return 'OK'
+    browser.browser.doOpen = fake_doOpen
+    browser.browser.doClose = fake_doClose
+    browser.roof_move_active = False
+
     alpaca.Alpaca._start_multicast_responder = lambda self: None
     alpaca.Alpaca._start_roof_state_watcher = lambda self, gen, *a: None
 
-    original_sleep = alpaca.time.sleep
-    def fake_sleep(seconds):
-        events.append(('sleep', seconds))
-    alpaca.time.sleep = fake_sleep
+    app = Flask(__name__)
+    inst = alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
+    client = app.test_client()
 
-    try:
-        app = Flask(__name__)
-        inst = alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
-        client = app.test_client()
-        body = client.put('/api/v1/dome/0/openshutter').get_json()
-        assert body['ErrorNumber'] == 0, body
-        assert events[:3] == ['roofout_on', ('sleep', alpaca.ROOF_POWER_SETTLE_DELAY), 'startStop'], events
-    finally:
-        alpaca.time.sleep = original_sleep
+    # CloseShutter: _begin_move should turn off mount power then call doClose().
+    body = client.put('/api/v1/dome/0/closeshutter').get_json()
+    assert body['ErrorNumber'] == 0, body
+    assert events == ['mntout_off', 'doClose'], events
 
-    print('OpenShutter relay delay test passed')
+    # Simulate roof now closed; then verify OpenShutter calls doOpen() directly.
+    device.Gpio.open._v = False
+    device.Gpio.close._v = True
+    inst._shutter_status = alpaca.SHUTTER_CLOSED
+    events.clear()
+    body = client.put('/api/v1/dome/0/openshutter').get_json()
+    assert body['ErrorNumber'] == 0, body
+    assert events == ['doOpen'], events
+
+    print('Alpaca begin_move delegation test passed')
 
 
 def test_discovery_response_format():
@@ -382,7 +402,7 @@ def test_discovery_response_format():
     try:
         app = Flask(__name__)
         instance = alpaca.Alpaca(app, device_number=0, base_path='/api/v1')
-        response = instance._format_discovery_response(('127.0.0.1', 65000))
+        response = instance._format_discovery_response()
         assert isinstance(response, bytes)
         payload = json.loads(response.decode('utf-8'))
         assert payload == {'AlpacaPort': alpaca.ALPACA_HTTP_PORT}, payload
@@ -398,4 +418,5 @@ if __name__ == '__main__':
     test_motion_generation()
     test_reservation_rollback_and_pending()
     test_watcher_failure_modes()
+    test_alpaca_begin_move_delegates_to_browser()
     test_discovery_response_format()
